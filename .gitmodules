@@ -1,0 +1,6 @@
+[submodule "lib/rai"]
+	path = lib/rai
+	url = git@github.com:squarra/rai.git
+[submodule "lib/rai-robotModels"]
+	path = lib/rai-robotModels
+	url = git@github.com:MarcToussaint/rai-robotModels.git
