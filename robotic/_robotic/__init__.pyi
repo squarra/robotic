@@ -54,20 +54,10 @@ class BSpline:
 
         non-initialized
         """
-    def append(self, points: arr, times_rel: arr, inside: bool = ...) -> None:
-        """append(self: _robotic.BSpline, points: arr, times_rel: arr, inside: bool = False) -> None
-
-        appends points to the current spline; times_rel become relative to the current last knot; inside = remove the current end double knot (zero vel), smoothly blending but not transitioning anymore through the current end point
-        """
     def eval(self, sampleTimes: arr, derivative: int = ...) -> arr:
         """eval(self: _robotic.BSpline, sampleTimes: arr, derivative: int = 0) -> arr
 
         evaluate the spline (or its derivative) for given sampleTimes
-        """
-    def eval3(self, time: float) -> arr:
-        """eval3(self: _robotic.BSpline, time: float) -> arr
-
-        evaluate the spline pos, vel, acc (3xn matrix) at a single time
         """
     def getBmatrix(self, sampleTimes: arr, startDuplicates: bool = ..., endDuplicates: bool = ...) -> arr:
         """getBmatrix(self: _robotic.BSpline, sampleTimes: arr, startDuplicates: bool = False, endDuplicates: bool = False) -> arr
@@ -78,18 +68,8 @@ class BSpline:
         """getCtrlPoints(self: _robotic.BSpline) -> arr"""
     def getKnots(self) -> arr:
         """getKnots(self: _robotic.BSpline) -> arr"""
-    def overwriteSmooth(self, points: arr, times_rel: arr, time_cut: float) -> None:
-        """overwriteSmooth(self: _robotic.BSpline, points: arr, times_rel: arr, time_cut: float) -> None
-
-        overwrites the spline by adopting the pos+vel at time_cut of the current spline and appending given points; NOTE: times_rel are added to time_cut)
-        """
-    def set(self, degree: int, points: arr, times: arr, setStartVel: arr = ..., setEndVel: arr = ...) -> BSpline:
-        """set(self: _robotic.BSpline, degree: int, points: arr, times: arr, setStartVel: arr = array([], dtype=float64), setEndVel: arr = array([], dtype=float64)) -> _robotic.BSpline
-
-        convenience: same as setKnots(degree, times) and setCtrlPoints(points, true, true, startVel, endVel)
-        """
     def setCtrlPoints(self, points: arr, addStartDuplicates: bool = ..., addEndDuplicates: bool = ..., setStartVel: arr = ..., setEndVel: arr = ...) -> None:
-        """setCtrlPoints(self: _robotic.BSpline, points: arr, addStartDuplicates: bool = True, addEndDuplicates: bool = True, setStartVel: arr = array([], dtype=float64), setEndVel: arr = array([], dtype=float64)) -> None
+        """setCtrlPoints(self: _robotic.BSpline, points: arr, addStartDuplicates: bool = True, addEndDuplicates: bool = True, setStartVel: arr = array(0.0078125), setEndVel: arr = array(0.0078125)) -> None
 
         set the ctrl points, automatically duplicating them as needed at start/end, optionally setting vels at start/end
         """
@@ -206,7 +186,7 @@ class Config:
         destroy and remove a frame from C
         """
     def eval(self, featureSymbol: FS, frames: StringA = ..., scale: arr = ..., target: arr = ..., order: int = ...) -> tuple:
-        """eval(self: _robotic.Config, featureSymbol: _robotic.FS, frames: StringA = [], scale: arr = array([], dtype=float64), target: arr = array([], dtype=float64), order: int = -1) -> tuple
+        """eval(self: _robotic.Config, featureSymbol: _robotic.FS, frames: StringA = [], scale: arr = array(0.0078125), target: arr = array(0.0078125), order: int = -1) -> tuple
 
         evaluate a feature -- see https://marctoussaint.github.io/robotics-course/tutorials/features.html
         """
@@ -272,8 +252,6 @@ class Config:
 
         get the joint state as a numpy vector, optionally only for a subset of joints specified as list of joint names
         """
-    def getRoots(self) -> list[Frame]:
-        """getRoots(self: _robotic.Config) -> list[_robotic.Frame]"""
     def get_viewer(self) -> ConfigurationViewer:
         """get_viewer(self: _robotic.Config) -> _robotic.ConfigurationViewer"""
     def processInertias(self, recomputeInertias: bool = ..., transformToDiagInertia: bool = ...) -> None:
@@ -752,25 +730,25 @@ class Frame:
     def setContact(self, arg0: int) -> Frame:
         """setContact(self: _robotic.Frame, arg0: int) -> _robotic.Frame"""
     def setConvexMesh(self, points: arr, colors=..., radius: float = ...) -> Frame:
-        """setConvexMesh(self: _robotic.Frame, points: arr, colors: Array<T> = array([], dtype=uint8), radius: float = 0.0) -> _robotic.Frame
+        """setConvexMesh(self: _robotic.Frame, points: arr, colors: Array<T> = array(1, dtype=uint8), radius: float = 0.0) -> _robotic.Frame
 
         attach a convex mesh as shape
         """
     def setImplicitSurface(self, data, size: arr, blur: int, resample: float = ...) -> Frame:
         """setImplicitSurface(self: _robotic.Frame, data: Array<T>, size: arr, blur: int, resample: float = -1.0) -> _robotic.Frame"""
     def setJoint(self, jointType: JT, limits: arr = ..., scale: float = ..., mimic: Frame = ...) -> Frame:
-        """setJoint(self: _robotic.Frame, jointType: _robotic.JT, limits: arr = array([], dtype=float64), scale: float = 1.0, mimic: _robotic.Frame = None) -> _robotic.Frame"""
+        """setJoint(self: _robotic.Frame, jointType: _robotic.JT, limits: arr = array(0.0078125), scale: float = 1.0, mimic: _robotic.Frame = None) -> _robotic.Frame"""
     def setJointState(self, arg0: arr) -> Frame:
         """setJointState(self: _robotic.Frame, arg0: arr) -> _robotic.Frame"""
     def setLines(self, verts: arr, colors=..., singleConnectedLine: bool = ...) -> Frame:
-        """setLines(self: _robotic.Frame, verts: arr, colors: Array<T> = array([], dtype=uint8), singleConnectedLine: bool = False) -> _robotic.Frame
+        """setLines(self: _robotic.Frame, verts: arr, colors: Array<T> = array(1, dtype=uint8), singleConnectedLine: bool = False) -> _robotic.Frame
 
         attach lines as shape
         """
     def setMass(self, mass: float, inertiaMatrix: arr = ...) -> Frame:
-        """setMass(self: _robotic.Frame, mass: float, inertiaMatrix: arr = array([], dtype=float64)) -> _robotic.Frame"""
+        """setMass(self: _robotic.Frame, mass: float, inertiaMatrix: arr = array(0.0078125)) -> _robotic.Frame"""
     def setMesh(self, vertices: arr, triangles: uintA, colors=..., cvxParts: uintA = ...) -> Frame:
-        """setMesh(self: _robotic.Frame, vertices: arr, triangles: uintA, colors: Array<T> = array([], dtype=uint8), cvxParts: uintA = array([], dtype=uint32)) -> _robotic.Frame
+        """setMesh(self: _robotic.Frame, vertices: arr, triangles: uintA, colors: Array<T> = array(1, dtype=uint8), cvxParts: uintA = array(0, dtype=uint32)) -> _robotic.Frame
 
         attach a mesh shape
         """
@@ -784,7 +762,7 @@ class Frame:
     def setParent(self, parent: Frame, keepAbsolutePose_and_adaptRelativePose: bool = ..., checkForLoop: bool = ...) -> Frame:
         """setParent(self: _robotic.Frame, parent: _robotic.Frame, keepAbsolutePose_and_adaptRelativePose: bool = False, checkForLoop: bool = False) -> _robotic.Frame"""
     def setPointCloud(self, points: arr, colors=..., normals: arr = ...) -> Frame:
-        """setPointCloud(self: _robotic.Frame, points: arr, colors: Array<T> = array([], dtype=uint8), normals: arr = array([], dtype=float64)) -> _robotic.Frame
+        """setPointCloud(self: _robotic.Frame, points: arr, colors: Array<T> = array(1, dtype=uint8), normals: arr = array(0.0078125)) -> _robotic.Frame
 
         attach a point cloud shape
         """
@@ -813,7 +791,7 @@ class Frame:
     def setTensorShape(self, data, size: arr) -> Frame:
         """setTensorShape(self: _robotic.Frame, data: Array<T>, size: arr) -> _robotic.Frame"""
     def setTextureFile(self, image_filename, texCoords: arr = ...) -> Frame:
-        """setTextureFile(self: _robotic.Frame, image_filename: rai::String, texCoords: arr = array([], dtype=float64)) -> _robotic.Frame
+        """setTextureFile(self: _robotic.Frame, image_filename: rai::String, texCoords: arr = array(0.0078125)) -> _robotic.Frame
 
         set the texture of the mesh of a shape
         """
@@ -949,7 +927,7 @@ class KOMO:
         * enableCollisions: if True, KOMO runs a broadphase collision check (using libFCL) in each optimization step -- only then accumulative collision/penetration features will correctly evaluate to non-zero. But this is costly.
         """
     def addControlObjective(self, times: arr, order: int, scale: float = ..., target: arr = ..., deltaFromSlice: int = ..., deltaToSlice: int = ...) -> Objective:
-        """addControlObjective(self: _robotic.KOMO, times: arr, order: int, scale: float = 1.0, target: arr = array([], dtype=float64), deltaFromSlice: int = 0, deltaToSlice: int = 0) -> Objective
+        """addControlObjective(self: _robotic.KOMO, times: arr, order: int, scale: float = 1.0, target: arr = array(0.0078125), deltaFromSlice: int = 0, deltaToSlice: int = 0) -> Objective
 
 
         * times: (as for `addObjective`) the phase-interval in which this objective holds; [] means all times
@@ -964,7 +942,7 @@ class KOMO:
     def addModeSwitch(self, times: arr, newMode: SY, frames: StringA, firstSwitch: bool = ...) -> None:
         """addModeSwitch(self: _robotic.KOMO, times: arr, newMode: _robotic.SY, frames: StringA, firstSwitch: bool = True) -> None"""
     def addObjective(self, times: arr, feature: FS, frames: StringA, type: ObjectiveType, scale: arr = ..., target: arr = ..., order: int = ...) -> None:
-        """addObjective(self: _robotic.KOMO, times: arr, feature: _robotic.FS, frames: StringA, type: ObjectiveType, scale: arr = array([], dtype=float64), target: arr = array([], dtype=float64), order: int = -1) -> None
+        """addObjective(self: _robotic.KOMO, times: arr, feature: _robotic.FS, frames: StringA, type: ObjectiveType, scale: arr = array(0.0078125), target: arr = array(0.0078125), order: int = -1) -> None
 
         central method to define objectives in the KOMO NLP:
         * times: the time intervals (subset of configurations in a path) over which this feature is active (irrelevant for IK)
@@ -975,7 +953,7 @@ class KOMO:
         * target: the offset which is substracted from the feature (before scaling)
         """
     def addQuaternionNorms(self, times: arr = ..., scale: float = ..., hard: bool = ...) -> None:
-        """addQuaternionNorms(self: _robotic.KOMO, times: arr = array([], dtype=float64), scale: float = 3.0, hard: bool = True) -> None"""
+        """addQuaternionNorms(self: _robotic.KOMO, times: arr = array(0.0078125), scale: float = 3.0, hard: bool = True) -> None"""
     def addRigidSwitch(self, times: float, frames: StringA, noJumpStart: bool = ...) -> None:
         """addRigidSwitch(self: _robotic.KOMO, times: float, frames: StringA, noJumpStart: bool = True) -> None"""
     def addTimeOptimization(self) -> None:
@@ -996,7 +974,7 @@ class KOMO:
     def getFrameState(self, arg0: int) -> arr:
         """getFrameState(self: _robotic.KOMO, arg0: int) -> arr"""
     def getPath(self, dofIndices: uintA = ...) -> arr:
-        """getPath(self: _robotic.KOMO, dofIndices: uintA = array([], dtype=uint32)) -> arr
+        """getPath(self: _robotic.KOMO, dofIndices: uintA = array(0, dtype=uint32)) -> arr
 
         get path for selected dofs (default: all original config dofs)
         """
@@ -1153,7 +1131,7 @@ class NLP:
     def getBounds(self) -> arr:
         """getBounds(self: _robotic.NLP) -> arr
 
-        returns a 2xn array with lower and upper bounds as rows (or size zero, if there are no bounds)
+        returns the tuple $(b_{lo},b_{up})$, where both vectors are of same dimensionality of $x$ (or size zero, if there are no bounds)
         """
     def getDimension(self) -> int:
         """getDimension(self: _robotic.NLP) -> int
@@ -1456,7 +1434,6 @@ class OptMethod:
         """(arg0: _robotic.OptMethod) -> int"""
 
 class Quaternion:
-    """See the Quaternion Lecture Note https://www.user.tu-berlin.de/mtoussai/notes/quaternions.html for details"""
     def __init__(self) -> None:
         """__init__(self: _robotic.Quaternion) -> None
 
@@ -1790,7 +1767,7 @@ class Simulation:
     def getState(self) -> tuple:
         """getState(self: _robotic.Simulation) -> tuple
 
-        returns a 5-tuple of (time, q, qDot, freePos, freeVel)
+        returns a 4-tuple or frame state, joint state, frame velocities (linear & angular), joint velocities
         """
     def getTimeToSplineEnd(self) -> float:
         """getTimeToSplineEnd(self: _robotic.Simulation) -> float"""
@@ -1805,7 +1782,7 @@ class Simulation:
     def moveGripper(self, gripperFrameName: str, width: float, speed: float = ...) -> None:
         """moveGripper(self: _robotic.Simulation, gripperFrameName: str, width: float, speed: float = 0.3) -> None"""
     def pushConfigurationToSimulator(self, frameVelocities: arr = ..., jointVelocities: arr = ...) -> None:
-        """pushConfigurationToSimulator(self: _robotic.Simulation, frameVelocities: arr = array([], dtype=float64), jointVelocities: arr = array([], dtype=float64)) -> None
+        """pushConfigurationToSimulator(self: _robotic.Simulation, frameVelocities: arr = array(0.0078125), jointVelocities: arr = array(0.0078125)) -> None
 
         set the simulator to the full (frame) state of the configuration
         """
@@ -1814,8 +1791,8 @@ class Simulation:
 
         reset the spline reference, i.e., clear the current spline buffer and initialize it to constant spline at current position (to which setSplineRef can append)
         """
-    def resetTime(self, arg0: float) -> None:
-        """resetTime(self: _robotic.Simulation, arg0: float) -> None"""
+    def resetTime(self) -> None:
+        """resetTime(self: _robotic.Simulation) -> None"""
     def selectSensor(self, *args, **kwargs):
         """selectSensor(self: _robotic.Simulation, sensorName: str) -> rai::CameraView::Sensor"""
     def setSplineRef(self, path: arr, times: arr, append: bool = ...) -> None:
@@ -1826,10 +1803,10 @@ class Simulation:
         * times: array with single total duration, or time for each control point (times.N==path.d0)
         * append: append (with zero-velocity at append), or smoothly overwrite
         """
-    def setState(self, time: float, q: arr, qDot: arr, freePos: arr, freeVel: arr) -> None:
-        """setState(self: _robotic.Simulation, time: float, q: arr, qDot: arr, freePos: arr, freeVel: arr) -> None"""
-    def step(self, u_control: arr = ..., tau: float = ..., u_mode: ControlMode = ...) -> None:
-        """step(self: _robotic.Simulation, u_control: arr = array([], dtype=float64), tau: float = 0.01, u_mode: _robotic.ControlMode = <ControlMode.none: 0>) -> None"""
+    def setState(self, frameState: arr, jointState: arr = ..., frameVelocities: arr = ..., jointVelocities: arr = ...) -> None:
+        """setState(self: _robotic.Simulation, frameState: arr, jointState: arr = array(0.0078125), frameVelocities: arr = array(0.0078125), jointVelocities: arr = array(0.0078125)) -> None"""
+    def step(self, u_control: arr, tau: float = ..., u_mode: ControlMode = ...) -> None:
+        """step(self: _robotic.Simulation, u_control: arr, tau: float = 0.01, u_mode: _robotic.ControlMode = <ControlMode.velocity: 2>) -> None"""
 
 class SimulationEngine:
     """Members:
@@ -1925,16 +1902,6 @@ def depthImage2PointCloud(depth: numpy.ndarray[numpy.float32], fxycxy: arr) -> a
 
     return the point cloud from the depth image
     """
-def get_NLP_Problem_names() -> StringA:
-    """get_NLP_Problem_names() -> StringA
-
-    return all problem names
-    """
-def make_NLP_Problem(problem_name) -> NLP:
-    """make_NLP_Problem(problem_name: rai::String) -> NLP
-
-    create a benchmark NLP
-    """
 def params_add(pythondictionaryorparamstoadd: dict) -> None:
     """params_add(python dictionary or params to add: dict) -> None
 
@@ -1959,16 +1926,6 @@ def raiPath(*args, **kwargs):
     """raiPath(arg0: str) -> rai::String
 
     get a path relative to rai base path
-    """
-def rnd_seed(s: int) -> None:
-    """rnd_seed(s: int) -> None
-
-    seed rnd with s
-    """
-def rnd_seed_random() -> None:
-    """rnd_seed_random() -> None
-
-    seed rnd randomly
     """
 def setRaiPath(arg0: str) -> None:
     """setRaiPath(arg0: str) -> None

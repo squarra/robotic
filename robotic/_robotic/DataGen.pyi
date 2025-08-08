@@ -25,7 +25,7 @@ class ShapenetGrasps:
     def __init__(self) -> None:
         """__init__(self: _robotic.DataGen.ShapenetGrasps) -> None"""
     def displaySamples(self, samples: arr, context: uintA, scores: arr = ...) -> None:
-        """displaySamples(self: _robotic.DataGen.ShapenetGrasps, samples: arr, context: uintA, scores: arr = array([], dtype=float64)) -> None
+        """displaySamples(self: _robotic.DataGen.ShapenetGrasps, samples: arr, context: uintA, scores: arr = array(0.0078125)) -> None
 
         (batch interface) displays all samples
         """
