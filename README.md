@@ -9,3 +9,13 @@ cp build/_robotic.cpython-3*-x86_64-linux-gnu.so robotic/
 cd robotic
 stubgen -p _robotic -o . --include-docstrings
 ```
+
+## Setting up the environment
+
+We use uv for best reproducibility
+
+```sh
+uv sync
+source .venv/bin/activate
+uv pip install -e .
+```

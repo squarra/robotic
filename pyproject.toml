@@ -10,7 +10,11 @@ dependencies = ["numpy>=2.3.2"]
 dev = [
     { include-group = "examples" },
 ]
-examples = ["ipykernel>=6.30.1", "matplotlib>=3.10.5"]
+examples = [
+    "ipykernel>=6.30.1",
+ "matplotlib>=3.10.5",
+ "trimesh>=4.7.1",
+]
 
 [tool.setuptools.packages.find]
 where = ["."]
