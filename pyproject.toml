@@ -11,9 +11,11 @@ dev = [
     { include-group = "examples" },
 ]
 examples = [
+    "h5py>=3.14.0",
     "ipykernel>=6.30.1",
- "matplotlib>=3.10.5",
- "trimesh>=4.7.1",
+    "matplotlib>=3.10.5",
+    "pygobject>=3.52.3",
+    "trimesh>=4.7.1",
 ]
 
 [tool.setuptools.packages.find]

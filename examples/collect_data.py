@@ -1,0 +1,37 @@
+import h5py
+import numpy as np
+
+from robotic import ST
+from robotic._robotic import JT
+from robotic.manipulation import Manipulation
+from robotic.scenario import PandaScenario
+
+config = PandaScenario()
+config.addFrame("box", "table").setJoint(JT.rigid).setShape(ST.ssBox, [0.15, 0.06, 0.06, 0.005]).setRelativePosition([0.4, 0.4, 0.08]).setContact(1)
+config.addFrame("box2", "table").setJoint(JT.rigid).setShape(ST.ssBox, [0.15, 0.06, 0.06, 0.005]).setRelativePosition([0.1, 0.1, 0.08]).setContact(1)
+config.addFrame("box3", "table").setJoint(JT.rigid).setShape(ST.ssBox, [0.15, 0.06, 0.06, 0.005]).setRelativePosition([0.4, 0.1, 0.08]).setContact(1)
+config.addFrame("box4", "table").setJoint(JT.rigid).setShape(ST.ssBox, [0.15, 0.06, 0.06, 0.005]).setRelativePosition([0.1, 0.4, 0.08]).setContact(1)
+print(config)
+
+camera_positions = config.camera_positions
+masked_images = config.capture_masked_object_images()
+offset = np.array([0.1, 0, 0])
+
+with h5py.File("dataset.h5", "w") as f:
+    dp_group = f.create_group("datapoint_0001")
+    dp_group.create_dataset("camera_positions", data=camera_positions)
+    dp_group.create_dataset("masked_images", data=masked_images)
+    dp_group.create_dataset("offset", data=offset)
+
+    man_group = dp_group.create_group("manipulations")
+    for obj in config.man_frames:
+        obj_group = man_group.create_group(obj)
+        man = Manipulation(config, obj, slices=10)
+        for primitive in man.primitives:
+            man.reset()
+            man_frame = config.getFrame(obj)
+            man.target_pos(man_frame.getRelativePosition() + offset)
+            man.target_ori(man_frame.getRelativeQuaternion())
+            primitive()
+            ret = man.solve()
+            obj_group.create_dataset(f"{primitive.__name__}_feasible", data=ret.feasible)

@@ -173,6 +173,22 @@ wheels = [
 ]
 
 [[package]]
+name = "h5py"
+version = "3.14.0"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "numpy" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/5d/57/dfb3c5c3f1bf5f5ef2e59a22dec4ff1f3d7408b55bfcefcfb0ea69ef21c6/h5py-3.14.0.tar.gz", hash = "sha256:2372116b2e0d5d3e5e705b7f663f7c8d96fa79a4052d250484ef91d24d6a08f4", size = 424323, upload-time = "2025-06-06T14:06:15.01Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/6c/c2/7efe82d09ca10afd77cd7c286e42342d520c049a8c43650194928bcc635c/h5py-3.14.0-cp313-cp313-macosx_10_13_x86_64.whl", hash = "sha256:aa4b7bbce683379b7bf80aaba68e17e23396100336a8d500206520052be2f812", size = 3289245, upload-time = "2025-06-06T14:05:28.24Z" },
+    { url = "https://files.pythonhosted.org/packages/4f/31/f570fab1239b0d9441024b92b6ad03bb414ffa69101a985e4c83d37608bd/h5py-3.14.0-cp313-cp313-macosx_11_0_arm64.whl", hash = "sha256:ef9603a501a04fcd0ba28dd8f0995303d26a77a980a1f9474b3417543d4c6174", size = 2807335, upload-time = "2025-06-06T14:05:31.997Z" },
+    { url = "https://files.pythonhosted.org/packages/0d/ce/3a21d87896bc7e3e9255e0ad5583ae31ae9e6b4b00e0bcb2a67e2b6acdbc/h5py-3.14.0-cp313-cp313-manylinux_2_17_aarch64.manylinux2014_aarch64.whl", hash = "sha256:e8cbaf6910fa3983c46172666b0b8da7b7bd90d764399ca983236f2400436eeb", size = 4700675, upload-time = "2025-06-06T14:05:37.38Z" },
+    { url = "https://files.pythonhosted.org/packages/e7/ec/86f59025306dcc6deee5fda54d980d077075b8d9889aac80f158bd585f1b/h5py-3.14.0-cp313-cp313-manylinux_2_17_x86_64.manylinux2014_x86_64.whl", hash = "sha256:d90e6445ab7c146d7f7981b11895d70bc1dd91278a4f9f9028bc0c95e4a53f13", size = 4921632, upload-time = "2025-06-06T14:05:43.464Z" },
+    { url = "https://files.pythonhosted.org/packages/3f/6d/0084ed0b78d4fd3e7530c32491f2884140d9b06365dac8a08de726421d4a/h5py-3.14.0-cp313-cp313-win_amd64.whl", hash = "sha256:ae18e3de237a7a830adb76aaa68ad438d85fe6e19e0d99944a3ce46b772c69b3", size = 2852929, upload-time = "2025-06-06T14:05:47.659Z" },
+]
+
+[[package]]
 name = "ipykernel"
 version = "6.30.1"
 source = { registry = "https://pypi.org/simple" }
@@ -567,6 +583,19 @@ wheels = [
 ]
 
 [[package]]
+name = "pycairo"
+version = "1.28.0"
+source = { registry = "https://pypi.org/simple" }
+sdist = { url = "https://files.pythonhosted.org/packages/40/d9/412da520de9052b7e80bfc810ec10f5cb3dbfa4aa3e23c2820dc61cdb3d0/pycairo-1.28.0.tar.gz", hash = "sha256:26ec5c6126781eb167089a123919f87baa2740da2cca9098be8b3a6b91cc5fbc", size = 662477, upload-time = "2025-04-14T20:11:08.218Z" }
+wheels = [
+    { url = "https://files.pythonhosted.org/packages/59/a7/c3e5ed55781dfe1b31eb4a2482aeae707671f3d36b0ea53a1722f4a3dfe9/pycairo-1.28.0-cp313-cp313-win32.whl", hash = "sha256:d13352429d8a08a1cb3607767d23d2fb32e4c4f9faa642155383980ec1478c24", size = 750594, upload-time = "2025-04-14T20:10:59.284Z" },
+    { url = "https://files.pythonhosted.org/packages/8b/1c/ebadd290748aff3b6bc35431114d41e7a42f40a4b988c2aaf2dfed5d8156/pycairo-1.28.0-cp313-cp313-win_amd64.whl", hash = "sha256:082aef6b3a9dcc328fa648d38ed6b0a31c863e903ead57dd184b2e5f86790140", size = 841774, upload-time = "2025-04-14T20:11:01.79Z" },
+    { url = "https://files.pythonhosted.org/packages/3e/ce/a3f5f1946613cd8a4654322b878c59f273c6e9b01dfadadd3f609070e0b9/pycairo-1.28.0-cp313-cp313-win_arm64.whl", hash = "sha256:026afd53b75291917a7412d9fe46dcfbaa0c028febd46ff1132d44a53ac2c8b6", size = 691675, upload-time = "2025-04-16T19:30:26.565Z" },
+    { url = "https://files.pythonhosted.org/packages/96/1b/1f5da2b2e44b33a5b269ff28af710b0a7903001d9cf8a40d00fc944a5092/pycairo-1.28.0-cp314-cp314-win32.whl", hash = "sha256:d0ab30585f536101ad6f09052fc3895e2a437ba57531ea07223d0e076248025d", size = 766699, upload-time = "2025-07-24T06:36:07.267Z" },
+    { url = "https://files.pythonhosted.org/packages/c9/91/1d5f18bd3ed469b1de8f83bfbf8bd67d23439f075151b66740fd35356190/pycairo-1.28.0-cp314-cp314-win_amd64.whl", hash = "sha256:94f2ed204999ab95a0671a0fa948ffbb9f3d6fb8731fe787917f6d022d9c1c0f", size = 868725, upload-time = "2025-07-24T06:36:09.597Z" },
+]
+
+[[package]]
 name = "pycparser"
 version = "2.22"
 source = { registry = "https://pypi.org/simple" }
@@ -583,6 +612,15 @@ sdist = { url = "https://files.pythonhosted.org/packages/b0/77/a5b8c569bf593b014
 wheels = [
     { url = "https://files.pythonhosted.org/packages/c7/21/705964c7812476f378728bdf590ca4b771ec72385c533964653c68e86bdc/pygments-2.19.2-py3-none-any.whl", hash = "sha256:86540386c03d588bb81d44bc3928634ff26449851e99741617ecb9037ee5ec0b", size = 1225217, upload-time = "2025-06-21T13:39:07.939Z" },
 ]
+
+[[package]]
+name = "pygobject"
+version = "3.52.3"
+source = { registry = "https://pypi.org/simple" }
+dependencies = [
+    { name = "pycairo" },
+]
+sdist = { url = "https://files.pythonhosted.org/packages/4a/36/fec530a313d3d48f12e112ac0a65ee3ccc87f385123a0493715609e8e99c/pygobject-3.52.3.tar.gz", hash = "sha256:00e427d291e957462a8fad659a9f9c8be776ff82a8b76bdf402f1eaeec086d82", size = 1235825, upload-time = "2025-03-16T18:22:57.1Z" }
 
 [[package]]
 name = "pyparsing"
@@ -671,13 +709,17 @@ dependencies = [
 
 [package.dev-dependencies]
 dev = [
+    { name = "h5py" },
     { name = "ipykernel" },
     { name = "matplotlib" },
+    { name = "pygobject" },
     { name = "trimesh" },
 ]
 examples = [
+    { name = "h5py" },
     { name = "ipykernel" },
     { name = "matplotlib" },
+    { name = "pygobject" },
     { name = "trimesh" },
 ]
 
@@ -686,13 +728,17 @@ requires-dist = [{ name = "numpy", specifier = ">=2.3.2" }]
 
 [package.metadata.requires-dev]
 dev = [
+    { name = "h5py", specifier = ">=3.14.0" },
     { name = "ipykernel", specifier = ">=6.30.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
+    { name = "pygobject", specifier = ">=3.52.3" },
     { name = "trimesh", specifier = ">=4.7.1" },
 ]
 examples = [
+    { name = "h5py", specifier = ">=3.14.0" },
     { name = "ipykernel", specifier = ">=6.30.1" },
     { name = "matplotlib", specifier = ">=3.10.5" },
+    { name = "pygobject", specifier = ">=3.52.3" },
     { name = "trimesh", specifier = ">=4.7.1" },
 ]
 

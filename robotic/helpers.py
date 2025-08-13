@@ -3,9 +3,10 @@ import functools
 import os
 from typing import ClassVar
 
+import numpy as np
 import trimesh
 
-import robotic as ry
+from robotic._robotic import KOMO, Config
 
 
 @functools.cache
@@ -54,7 +55,7 @@ class ContextVar:
 DEBUG = ContextVar("DEBUG", 0)
 
 
-def get_mesh(config: ry.Config, frame_name: str, colors=True, transform=True) -> trimesh.Trimesh:
+def get_mesh(config: Config, frame_name: str, colors=True, transform=True) -> trimesh.Trimesh:
     frame = config.getFrame(frame_name)
     points, triangles, face_colors = frame.getMesh()
     if not colors or face_colors.ndim == 0:
@@ -63,14 +64,6 @@ def get_mesh(config: ry.Config, frame_name: str, colors=True, transform=True) ->
         return trimesh.Trimesh(vertices=points, faces=triangles, face_colors=face_colors).apply_transform(frame.getTransform())
     else:
         return trimesh.Trimesh(vertices=points, faces=triangles, face_colors=face_colors)
-
-
-def load_simple_config(obj_pos=[0.0, 0.25, 0.08]):
-    config = ry.Config()
-    config.addFile(ry.raiPath("scenarios/pandaSingle.g"))
-    config.delFrame("panda_collCameraWrist")
-    config.addFrame("obj", "table").setJoint(ry.JT.rigid).setShape(ry.ST.ssBox, [0.15, 0.06, 0.06, 0.005]).setRelativePosition(obj_pos).setContact(1)
-    return config
 
 
 def create_gripper_mesh(width=0.1, thickness=0.01, finger_length=0.04) -> trimesh.Trimesh:
@@ -89,7 +82,7 @@ def create_gripper_mesh(width=0.1, thickness=0.01, finger_length=0.04) -> trimes
     return gripper
 
 
-def config_to_trimesh(config: ry.Config):
+def config_to_trimesh(config: Config):
     meshes = []
     for frame in config.getFrames():
         print(frame.name)
@@ -102,7 +95,7 @@ def config_to_trimesh(config: ry.Config):
     return meshes
 
 
-def komo_to_trimesh(komo: ry.KOMO, phase: int):
+def komo_to_trimesh(komo: KOMO, phase: int):
     meshes = []
     for frameName in komo.getConfig().getFrameNames():
         frame = komo.getFrame(frameName, phase)
@@ -112,3 +105,26 @@ def komo_to_trimesh(komo: ry.KOMO, phase: int):
             print("no idea what this index error is")
         except OverflowError:
             print("overflow wtf")
+
+
+def compute_look_at_matrix(origin_pos: np.typing.ArrayLike, target_pos: np.typing.ArrayLike):
+    """Return a rotation matrix that orients from camera_pos to face target_pos."""
+    if abs(origin_pos[0]) < np.finfo(np.float32).eps:  # weird robotic behaviour: avoid x being too close to zero
+        origin_pos[0] = np.finfo(np.float32).eps
+    forward = target_pos - origin_pos
+    forward /= np.linalg.norm(forward)
+    right = np.cross([0, 0, -1], forward)
+    right /= np.linalg.norm(right)
+    up = np.cross(forward, right)
+    return np.column_stack((right, up, forward))
+
+
+def mask_colors(seg_rgb: np.ndarray, colors: np.ndarray):
+    """Return mask where True = pixel matches one of the given colors."""
+    seg_int = (seg_rgb[:, :, 0].astype(np.uint32) << 16) | (seg_rgb[:, :, 1].astype(np.uint32) << 8) | seg_rgb[:, :, 2].astype(np.uint32)
+    colors_int = (colors[:, 0].astype(np.uint32) << 16) | (colors[:, 1].astype(np.uint32) << 8) | colors[:, 2].astype(np.uint32)
+    return np.isin(seg_int, colors_int)
+
+
+def rgb_to_gray(image: np.ndarray):
+    return np.dot(image[...,:3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
