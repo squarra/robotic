@@ -45,6 +45,11 @@ class Scenario(Config):
             self.compute_rgbd()  #  need to call this for ConfigurationViewer::updateConfiguration() to be called
         return (self.camera_view.computeSegmentationImage() // step) * step
 
+    def compute_seg_ids(self, update_config=False):
+        if update_config:
+            self.compute_rgbd()  #  need to call this for ConfigurationViewer::updateConfiguration() to be called
+        return self.camera_view.computeSegmentationID()
+
     def compute_seg_colors(self):
         images = []
         for position in self.camera_positions:
@@ -74,22 +79,23 @@ class PandaScenario(Scenario):
         )
         self.addFile(raiPath("panda/panda.g")).setParent(self.table).setRelativePoseByText("t(0 -0.2 0.05) d(90 0 0 1)").setJoint(JT.rigid)
 
-        self.env_colors = np.unique(np.vstack((self.env_colors, self.compute_seg_colors())), axis=0)
+        self.env_colors = self.compute_seg_colors()
         self.env_frames = set(self.getFrameNames())
 
-    def compute_object_colors(self):
-        all_colors = self.compute_seg_colors()  # (N, 3)
-        robot_colors = self.robot_colors  # (M, 3)
-        all_int = (all_colors[:, 0].astype(np.uint32) << 16) | (all_colors[:, 1].astype(np.uint32) << 8) | all_colors[:, 2].astype(np.uint32)
-        robot_int = (robot_colors[:, 0].astype(np.uint32) << 16) | (robot_colors[:, 1].astype(np.uint32) << 8) | robot_colors[:, 2].astype(np.uint32)
-        return all_colors[~np.isin(all_int, robot_int)]
-
-    def capture_masked_object_images(self):
-        images = []
+    def compute_images_and_object_masks(self) -> np.ndarray:
+        gray_images = []
+        seg_images = []
         for pos in self.camera_positions:
             self.set_camera(pos)
-            gray = self.compute_gray()
-            seg_rgb = self.compute_seg_rgb()
-            gray[mask_colors(seg_rgb, self.env_colors)] = 0
-            images.append(gray)
-        return np.stack(images)
+            gray_images.append(self.compute_gray())
+            seg_images.append(self.compute_seg_rgb())
+        gray_images = np.stack(gray_images)
+        seg_images = np.stack(seg_images, dtype=np.uint32)
+
+        env_colors = self.env_colors.astype(np.uint32)
+        env_colors_int = (env_colors[..., 0] << 16) | (env_colors[..., 1] << 8) | env_colors[..., 2]
+        seg_colors_int = (seg_images[..., 0] << 16) | (seg_images[..., 1] << 8) | seg_images[..., 2]
+        all_colors_int = np.unique(seg_colors_int)
+        obj_colors_int = all_colors_int[~np.isin(all_colors_int, env_colors_int)]
+        masks = seg_colors_int[:, None, :, :] == obj_colors_int[None, :, None, None]
+        return gray_images, masks
