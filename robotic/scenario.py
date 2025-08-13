@@ -34,11 +34,8 @@ class Scenario(Config):
     def compute_rgbd(self) -> tuple[np.ndarray, np.ndarray]:
         return self.camera_view.computeImageAndDepth(self)
 
-    def compute_rgb(self):
-        return self.compute_rgbd()[0]
-
-    def compute_gray(self):
-        return rgb_to_gray(self.compute_rgb())
+    def compute_image(self, grayscale=False):
+        return rgb_to_gray(self.compute_rgbd()[0]) if grayscale else self.compute_rgbd()[0]
 
     def compute_seg_rgb(self, step=64, update_config=False) -> np.ndarray:
         if update_config:
@@ -82,11 +79,11 @@ class PandaScenario(Scenario):
         self.env_colors = self.compute_seg_colors()
         self.env_frames = set(self.getFrameNames())
 
-    def compute_images_and_seg_ids(self) -> np.ndarray:
-        gray_images = []
+    def compute_images_and_seg_ids(self, grayscale=False) -> np.ndarray:
+        images = []
         seg_ids = []
         for pos in self.camera_positions:
             self.set_camera(pos)
-            gray_images.append(self.compute_gray())
+            images.append(self.compute_image(grayscale))
             seg_ids.append(self.compute_seg_ids())
-        return np.stack(gray_images), np.stack(seg_ids)
+        return np.stack(images), np.stack(seg_ids)

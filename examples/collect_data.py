@@ -15,7 +15,7 @@ config.addFrame("box3", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size)
 config.addFrame("box4", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size).setRelativePosition([0.1, 0.4, box_z]).setContact(1)
 
 camera_positions = config.camera_positions
-images, seg_ids = config.compute_images_and_seg_ids()
+images, seg_ids = config.compute_images_and_seg_ids(grayscale=True)
 target_pos = np.array([0.5, 0.4, box_z])
 with h5py.File("dataset.h5", "w") as f:
     dp_group = f.create_group("datapoint_0001")
