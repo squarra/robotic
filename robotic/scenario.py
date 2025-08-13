@@ -68,7 +68,6 @@ class PandaScenario(Scenario):
         self.table = (
             self.addFrame("table", "world")
             .setShape(ST.ssBox, [2.5, 2.5, 0.1, 0.02])
-            .setPosition([0, 0, 0.6])
             .setColor([0.3, 0.3, 0.3])
             .setContact(1)
             .setAttributes({"friction": 0.1, "logical": 0})
