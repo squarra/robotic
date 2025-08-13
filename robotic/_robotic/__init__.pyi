@@ -91,8 +91,8 @@ class CameraView:
 
         returns image and depth from a camera sensor; the 'config' argument needs to be the same configuration as in the constructor, but in new state
         """
-    def computeSegmentationID(self, *args, **kwargs):
-        """computeSegmentationID(self: _robotic.CameraView) -> Array<T>
+    def computeSegmentationID(self) -> uintA:
+        """computeSegmentationID(self: _robotic.CameraView) -> uintA
 
         return a uint16 array with object ID segmentation
         """
