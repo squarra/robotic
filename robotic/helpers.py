@@ -127,4 +127,4 @@ def mask_colors(seg_rgb: np.ndarray, colors: np.ndarray):
 
 
 def rgb_to_gray(image: np.ndarray):
-    return np.dot(image[..., :3], [0.2989, 0.5870, 0.1140])
+    return np.dot(image[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)

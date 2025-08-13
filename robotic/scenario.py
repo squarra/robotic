@@ -82,20 +82,11 @@ class PandaScenario(Scenario):
         self.env_colors = self.compute_seg_colors()
         self.env_frames = set(self.getFrameNames())
 
-    def compute_images_and_object_masks(self) -> np.ndarray:
+    def compute_images_and_seg_ids(self) -> np.ndarray:
         gray_images = []
-        seg_images = []
+        seg_ids = []
         for pos in self.camera_positions:
             self.set_camera(pos)
             gray_images.append(self.compute_gray())
-            seg_images.append(self.compute_seg_rgb())
-        gray_images = np.stack(gray_images)
-        seg_images = np.stack(seg_images, dtype=np.uint32)
-
-        env_colors = self.env_colors.astype(np.uint32)
-        env_colors_int = (env_colors[..., 0] << 16) | (env_colors[..., 1] << 8) | env_colors[..., 2]
-        seg_colors_int = (seg_images[..., 0] << 16) | (seg_images[..., 1] << 8) | seg_images[..., 2]
-        all_colors_int = np.unique(seg_colors_int)
-        obj_colors_int = all_colors_int[~np.isin(all_colors_int, env_colors_int)]
-        masks = seg_colors_int[:, None, :, :] == obj_colors_int[None, :, None, None]
-        return gray_images, masks
+            seg_ids.append(self.compute_seg_ids())
+        return np.stack(gray_images), np.stack(seg_ids)
