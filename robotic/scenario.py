@@ -1,7 +1,7 @@
 import numpy as np
 
 from robotic._robotic import JT, ST, CameraView, Config, raiPath
-from robotic.helpers import compute_look_at_matrix, mask_colors, rgb_to_gray
+from robotic.helpers import compute_look_at_matrix, rgb_to_gray
 
 
 class Scenario(Config):
@@ -14,7 +14,6 @@ class Scenario(Config):
         self.camera_view.setCamera(self.camera)
 
         self.camera_positions = self.generate_camera_positions(radius, num_views, heights)
-        self.env_colors = self.compute_seg_colors()
         self.env_frames = set(self.getFrameNames())
 
     def generate_camera_positions(self, radius: float, num_views: int, heights: list[float]):
@@ -35,24 +34,16 @@ class Scenario(Config):
         return self.camera_view.computeImageAndDepth(self)
 
     def compute_image(self, grayscale=False):
-        return rgb_to_gray(self.compute_rgbd()[0]) if grayscale else self.compute_rgbd()[0]
+        rgb = self.compute_rgbd()[0]
+        return rgb_to_gray(rgb) if grayscale else rgb
 
-    def compute_seg_rgb(self, step=64, update_config=False) -> np.ndarray:
-        if update_config:
-            self.compute_rgbd()  #  need to call this for ConfigurationViewer::updateConfiguration() to be called
-        return (self.camera_view.computeSegmentationImage() // step) * step
+    def compute_seg_rgb(self) -> np.ndarray:
+        """RGB-encoded frame IDs; IDs >= len(self.getFrames()) are background."""
+        return self.camera_view.computeSegmentationImage(self)
 
-    def compute_seg_ids(self, update_config=False):
-        if update_config:
-            self.compute_rgbd()  #  need to call this for ConfigurationViewer::updateConfiguration() to be called
-        return self.camera_view.computeSegmentationID()
-
-    def compute_seg_colors(self):
-        images = []
-        for position in self.camera_positions:
-            self.set_camera(position)
-            images.append(self.compute_seg_rgb(update_config=True))
-        return np.unique(np.stack(images).reshape(-1, 3), axis=0)
+    def compute_seg_ids(self) -> np.ndarray:
+        """Frame IDs per pixel; IDs >= len(self.getFrames()) are background."""
+        return self.camera_view.computeSegmentationID(self)
 
     @property
     def man_frames(self):
@@ -76,7 +67,6 @@ class PandaScenario(Scenario):
         )
         self.addFile(raiPath("panda/panda.g")).setParent(self.table).setRelativePoseByText("t(0 -0.2 0.05) d(90 0 0 1)").setJoint(JT.rigid)
 
-        self.env_colors = self.compute_seg_colors()
         self.env_frames = set(self.getFrameNames())
 
     def compute_images_and_seg_ids(self, grayscale=False) -> np.ndarray:

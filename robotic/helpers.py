@@ -119,12 +119,5 @@ def compute_look_at_matrix(origin_pos: np.typing.ArrayLike, target_pos: np.typin
     return np.column_stack((right, up, forward))
 
 
-def mask_colors(seg_rgb: np.ndarray, colors: np.ndarray):
-    """Return mask where True = pixel matches one of the given colors."""
-    seg_int = (seg_rgb[:, :, 0].astype(np.uint32) << 16) | (seg_rgb[:, :, 1].astype(np.uint32) << 8) | seg_rgb[:, :, 2].astype(np.uint32)
-    colors_int = (colors[:, 0].astype(np.uint32) << 16) | (colors[:, 1].astype(np.uint32) << 8) | colors[:, 2].astype(np.uint32)
-    return np.isin(seg_int, colors_int)
-
-
 def rgb_to_gray(image: np.ndarray):
     return np.dot(image[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
