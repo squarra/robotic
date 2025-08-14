@@ -4,7 +4,7 @@ class RndStableConfigs:
     """A generator of random stable configurations"""
     def __init__(self) -> None:
         """__init__(self: _robotic.DataGen.RndStableConfigs) -> None"""
-    def getSample(self, config: _robotic.Scenario, supports: StringA) -> bool:
+    def getSample(self, config: _robotic.Config, supports: StringA) -> bool:
         """getSample(self: _robotic.DataGen.RndStableConfigs, config: _robotic.Config, supports: StringA) -> bool
 
         sample a random configuration - displayed, access via config passed at construction
@@ -39,7 +39,7 @@ class ShapenetGrasps:
 
         (batch interface) returns scores for a single sample - this (row) are numbers where a single 'negative' means fail
         """
-    def getConfig(self) -> _robotic.Scenario:
+    def getConfig(self) -> _robotic.Config:
         """getConfig(self: _robotic.DataGen.ShapenetGrasps) -> _robotic.Config"""
     def getEvalGripperPoses(self) -> arr:
         """getEvalGripperPoses(self: _robotic.DataGen.ShapenetGrasps) -> arr
@@ -89,7 +89,7 @@ class ShapenetGrasps:
         set options
         """
 
-def sampleGraspCandidate(C: _robotic.Scenario, ptsFrame: str, refFrame: str, pregraspNormalSdv: float = ..., verbose: int = ...) -> arr:
+def sampleGraspCandidate(C: _robotic.Config, ptsFrame: str, refFrame: str, pregraspNormalSdv: float = ..., verbose: int = ...) -> arr:
     """sampleGraspCandidate(C: _robotic.Config, ptsFrame: str, refFrame: str, pregraspNormalSdv: float = 0.2, verbose: int = 1) -> arr
 
     sample random grasp candidates on an object represented as points

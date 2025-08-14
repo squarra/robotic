@@ -91,15 +91,15 @@ class CameraView:
 
         returns image and depth from a camera sensor; the 'config' argument needs to be the same configuration as in the constructor, but in new state
         """
-    def computeSegmentationID(self) -> uintA:
-        """computeSegmentationID(self: _robotic.CameraView) -> uintA
+    def computeSegmentationID(self, config: Config) -> uintA:
+        """computeSegmentationID(self: _robotic.CameraView, config: _robotic.Config) -> uintA
 
-        return a uint16 array with object ID segmentation
+        Update scene from config and return segmentation ID array
         """
     def computeSegmentationImage(self, *args, **kwargs):
-        """computeSegmentationImage(self: _robotic.CameraView) -> Array<T>
+        """computeSegmentationImage(self: _robotic.CameraView, config: _robotic.Config) -> Array<T>
 
-        return an rgb image encoding the object ID segmentation
+        Update scene from config and return segmentation RGB image
         """
     def getFxycxy(self) -> arr:
         """getFxycxy(self: _robotic.CameraView) -> arr
