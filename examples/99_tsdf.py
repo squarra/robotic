@@ -2,6 +2,7 @@ import numpy as np
 import open3d as o3d
 
 from robotic._robotic import ST
+from robotic.helpers import generate_circular_camera_positions
 from robotic.scenario import PandaScenario
 
 
@@ -31,7 +32,8 @@ def reconstruct_tsdf(scenario: PandaScenario):
     return mesh
 
 
-config = PandaScenario(heights=[1.5, 2.0])
+config = PandaScenario()
+config.camera_positions = generate_circular_camera_positions(1, 3, [1.5, 2.0])
 config.addFrame("box", "table").setShape(ST.ssBox, [0.2, 0.2, 0.1, 0.02]).setRelativePosition([0.4, 0.4, 0.08])
 config.addFrame("box2", "table").setShape(ST.ssBox, [0.2, 0.2, 0.1, 0.02]).setRelativePosition([0.1, 0.1, 0.08])
 config.addFrame("box3", "table").setShape(ST.ssBox, [0.2, 0.2, 0.1, 0.02]).setRelativePosition([0.4, 0.1, 0.08])
