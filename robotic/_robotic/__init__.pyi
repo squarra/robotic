@@ -200,8 +200,8 @@ class Config:
 
         returns the list of collisable pairs -- this should help debugging the 'contact' flag settings in a configuration
         """
-    def getCollisions(self, belowMargin: float = ...) -> list:
-        """getCollisions(self: _robotic.Config, belowMargin: float = 0.0) -> list
+    def getCollisions(self, belowMargin: float = ..., verbose: int = ...) -> list:
+        """getCollisions(self: _robotic.Config, belowMargin: float = 0.0, verbose: int = 0) -> list
 
         return the results of collision computations: a list of 3 tuples with (frame1, frame2, distance). Optionally report only on distances below a margin To get really precise distances and penetrations use the FS.distance feature with the two frame names
         """
@@ -675,6 +675,11 @@ class Frame:
         """computeCompoundInertia(self: _robotic.Frame) -> _robotic.Frame"""
     def convertDecomposedShapeToChildFrames(self) -> Frame:
         """convertDecomposedShapeToChildFrames(self: _robotic.Frame) -> _robotic.Frame"""
+    def ensure_X(self) -> None:
+        """ensure_X(self: _robotic.Frame) -> None
+
+        Ensure the absolute pose X is up-to-date
+        """
     def getAttributes(self) -> dict:
         """getAttributes(self: _robotic.Frame) -> dict
 
