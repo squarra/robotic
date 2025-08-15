@@ -1,3 +1,6 @@
+#!/usr/bin/env bash
+set -euo pipefail
+
 rm -rf build
 cmake -B build -DUSE_PYBIND=ON lib/rai
 cmake --build build -j 6
