@@ -1,11 +1,11 @@
 import numpy as np
 
 from robotic._robotic import JT, ST, CameraView, Config, raiPath
-from robotic.helpers import compute_look_at_matrix, rgb_to_gray
+from robotic.helpers import DEBUG, compute_look_at_matrix, generate_circular_camera_positions, rgb_to_gray
 
 
 class Scenario(Config):
-    def __init__(self, radius=1, num_views=3, heights=[2.0]):
+    def __init__(self, camera_positions):
         super().__init__()
         self.world = self.addFrame("world")
 
@@ -13,19 +13,8 @@ class Scenario(Config):
         self.camera_view = CameraView(self)
         self.camera_view.setCamera(self.camera)
 
-        self.camera_positions = self.generate_camera_positions(radius, num_views, heights)
+        self.camera_positions = camera_positions
         self.env_frames = set(self.getFrameNames())
-
-    def generate_camera_positions(self, radius: float, num_views: int, heights: list[float]):
-        """Generate circular camera positions at given heights, with num_views evenly spaced angles per height."""
-        positions = []
-        for h in heights:
-            for i in range(num_views):
-                angle = 2 * np.pi * i / num_views
-                x = radius * np.cos(angle)
-                y = radius * np.sin(angle)
-                positions.append([x, y, h])
-        return np.stack(positions)
 
     def set_camera(self, position: np.typing.ArrayLike):
         self.camera.setRelativePosition(position).setRotationMatrix(compute_look_at_matrix(self.camera.getPosition(), self.world.getPosition()))
@@ -45,6 +34,22 @@ class Scenario(Config):
         """Frame IDs per pixel; IDs >= len(self.getFrames()) are background."""
         return self.camera_view.computeSegmentationID(self)
 
+    def delete_man_frames(self):
+        for man_frame in self.man_frames:
+            self.delFrame(man_frame)
+
+    def compute_images_and_seg_ids(self, grayscale=False) -> np.ndarray:
+        images = []
+        seg_ids = []
+        for pos in self.camera_positions:
+            self.set_camera(pos)
+            images.append(self.compute_image(grayscale))
+            seg_ids.append(self.compute_seg_ids())
+        return np.stack(images), np.stack(seg_ids)
+
+    def compute_collisions(self):
+        return self.getCollisions(verbose=DEBUG.value)
+
     @property
     def man_frames(self):
         return set(self.getFrameNames()) - self.env_frames
@@ -56,11 +61,11 @@ class Scenario(Config):
 
 
 class PandaScenario(Scenario):
-    def __init__(self, **kwargs):
-        super().__init__(**kwargs)
+    def __init__(self):
+        super().__init__(generate_circular_camera_positions(1.0, 3, [2.0]))
         self.table = (
             self.addFrame("table", "world")
-            .setShape(ST.ssBox, [2.5, 2.5, 0.1, 0.02])
+            .setShape(ST.ssBox, [1.5, 1.5, 0.1, 0.02])
             .setColor([0.3, 0.3, 0.3])
             .setContact(1)
             .setAttributes({"friction": 0.1, "logical": 0})
@@ -69,11 +74,39 @@ class PandaScenario(Scenario):
 
         self.env_frames = set(self.getFrameNames())
 
-    def compute_images_and_seg_ids(self, grayscale=False) -> np.ndarray:
-        images = []
-        seg_ids = []
-        for pos in self.camera_positions:
-            self.set_camera(pos)
-            images.append(self.compute_image(grayscale))
-            seg_ids.append(self.compute_seg_ids())
-        return np.stack(images), np.stack(seg_ids)
+    def create_random_scene(self, n_objects_range=(2, 6), size_range=(0.02, 0.16), seed=None, max_tries=100):
+        rng = np.random.default_rng(seed)
+
+        n_objects = rng.integers(*n_objects_range)
+        table_x, table_y, table_z = self.table.getSize()[:3]
+        half_table_x = table_x / 2.0
+        half_table_y = table_y / 2.0
+
+        for i in range(n_objects):
+            size = rng.uniform(*size_range, size=3)
+            up_axis = rng.integers(0, 3)
+            perm = [ax for ax in range(3) if ax != up_axis] + [up_axis]
+            a, b, height = size[perm]
+            box = self.addFrame(f"box{i}", "table").setJoint(JT.rigid).setShape(ST.ssBox, [a, b, height, 0.005]).setContact(1)
+            yaw = rng.uniform(-np.pi, np.pi)
+            placed = False
+            for _ in range(max_tries):
+                ca, sa = np.cos(yaw), np.sin(yaw)
+                half_extent_x = 0.5 * (abs(a * ca) + abs(b * sa))
+                half_extent_y = 0.5 * (abs(a * sa) + abs(b * ca))
+
+                x = rng.uniform(-half_table_x + half_extent_x, half_table_x - half_extent_x)
+                y = rng.uniform(-half_table_y + half_extent_y, half_table_y - half_extent_y)
+                z = table_z / 2.0 + height / 2.0 + np.finfo(np.float32).eps
+                box.setRelativePosition([x, y, z])
+
+                half = 0.5 * yaw
+                box.setRelativeQuaternion([np.cos(half), 0.0, 0.0, np.sin(half)])
+
+                box.ensure_X()
+                if not self.compute_collisions():
+                    placed = True
+                    break
+
+            if not placed:
+                self.delFrame(box.name)

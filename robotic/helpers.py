@@ -121,3 +121,15 @@ def compute_look_at_matrix(origin_pos: np.typing.ArrayLike, target_pos: np.typin
 
 def rgb_to_gray(image: np.ndarray):
     return np.dot(image[..., :3], [0.2989, 0.5870, 0.1140]).astype(np.uint8)
+
+
+def generate_circular_camera_positions(radius: float, num_views: int, heights: list[float]):
+    """Generate circular camera positions at given heights, with num_views evenly spaced angles per height."""
+    positions = []
+    for h in heights:
+        for i in range(num_views):
+            angle = 2 * np.pi * i / num_views
+            x = radius * np.cos(angle)
+            y = radius * np.sin(angle)
+            positions.append([x, y, h])
+    return np.stack(positions)
