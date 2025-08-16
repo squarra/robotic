@@ -5,6 +5,7 @@ from typing import ClassVar
 
 import numpy as np
 import trimesh
+from scipy.spatial.transform import Rotation as R
 
 from robotic._robotic import KOMO, Config
 
@@ -133,3 +134,24 @@ def generate_circular_camera_positions(radius: float, num_views: int, heights: l
             y = radius * np.sin(angle)
             positions.append([x, y, h])
     return np.stack(positions)
+
+
+def random_z_rotation_matrix():
+    theta = np.random.uniform(0, 2 * np.pi)
+    return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
+
+
+def rotation_matrices_for_up():
+    mats = []
+    mats.append(np.eye(3))  # +z
+    mats.append(np.array([[0, 0, 1], [0, 1, 0], [-1, 0, 0]]))  # +x
+    mats.append(np.array([[0, 0, -1], [0, 1, 0], [1, 0, 0]]))  # -x
+    mats.append(np.array([[1, 0, 0], [0, 0, -1], [0, 1, 0]]))  # +y
+    mats.append(np.array([[1, 0, 0], [0, 0, 1], [0, -1, 0]]))  # -y
+    mats.append(np.array([[1, 0, 0], [0, -1, 0], [0, 0, -1]]))  # -z
+    return mats
+
+
+def matrix_to_quat(rotation_matrix: np.typing.ArrayLike):
+    """Helper since rai::Quaternion::setMatrix can be unstable"""
+    return np.roll(R.from_matrix(rotation_matrix).as_quat(), 1)

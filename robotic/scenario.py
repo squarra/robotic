@@ -1,7 +1,15 @@
 import numpy as np
 
 from robotic._robotic import JT, ST, CameraView, Config, raiPath
-from robotic.helpers import DEBUG, compute_look_at_matrix, generate_circular_camera_positions, rgb_to_gray
+from robotic.helpers import (
+    DEBUG,
+    compute_look_at_matrix,
+    generate_circular_camera_positions,
+    matrix_to_quat,
+    random_z_rotation_matrix,
+    rgb_to_gray,
+    rotation_matrices_for_up,
+)
 
 
 class Scenario(Config):
@@ -74,39 +82,41 @@ class PandaScenario(Scenario):
 
         self.env_frames = set(self.getFrameNames())
 
-    def create_random_scene(self, n_objects_range=(2, 6), size_range=(0.02, 0.16), seed=None, max_tries=100):
+    def add_boxes_to_scene(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.16), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
+        n_objects = np.random.randint(*num_boxes_range)
 
-        n_objects = rng.integers(*n_objects_range)
+        # Keep objects within table bounds
         table_x, table_y, table_z = self.table.getSize()[:3]
-        half_table_x = table_x / 2.0
-        half_table_y = table_y / 2.0
+        max_pos_x = table_x / 2 - box_size_range[1] / 2
+        max_pos_y = table_y / 2 - box_size_range[1] / 2
 
         for i in range(n_objects):
-            size = rng.uniform(*size_range, size=3)
-            up_axis = rng.integers(0, 3)
-            perm = [ax for ax in range(3) if ax != up_axis] + [up_axis]
-            a, b, height = size[perm]
-            box = self.addFrame(f"box{i}", "table").setJoint(JT.rigid).setShape(ST.ssBox, [a, b, height, 0.005]).setContact(1)
-            yaw = rng.uniform(-np.pi, np.pi)
+            size = rng.uniform(*box_size_range, size=(3))
+            rot = random_z_rotation_matrix()
+
+            # Randomize orientation (up-axis + z-rotation) and reorder size to match
+            up_rot = rng.choice(rotation_matrices_for_up())
+            quat = matrix_to_quat(rot @ up_rot)
+            permuted_size = size[np.argmax(np.abs(up_rot), axis=0)]
+
+            box = (
+                self.addFrame(f"box{i}", "table")
+                .setJoint(JT.rigid)
+                .setShape(ST.ssBox, [*permuted_size, 0.005])
+                .setRelativeQuaternion(quat)
+                .setContact(1)
+            )
+
             placed = False
             for _ in range(max_tries):
-                ca, sa = np.cos(yaw), np.sin(yaw)
-                half_extent_x = 0.5 * (abs(a * ca) + abs(b * sa))
-                half_extent_y = 0.5 * (abs(a * sa) + abs(b * ca))
-
-                x = rng.uniform(-half_table_x + half_extent_x, half_table_x - half_extent_x)
-                y = rng.uniform(-half_table_y + half_extent_y, half_table_y - half_extent_y)
-                z = table_z / 2.0 + height / 2.0 + np.finfo(np.float32).eps
+                x = np.random.uniform(-max_pos_x, max_pos_x)
+                y = np.random.uniform(-max_pos_y, max_pos_y)
+                z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
                 box.setRelativePosition([x, y, z])
-
-                half = 0.5 * yaw
-                box.setRelativeQuaternion([np.cos(half), 0.0, 0.0, np.sin(half)])
-
                 box.ensure_X()
                 if not self.compute_collisions():
                     placed = True
                     break
-
             if not placed:
                 self.delFrame(box.name)
