@@ -26,16 +26,15 @@ with h5py.File("dataset.h5", "w") as f:
 
     man_group = dp_group.create_group("manipulations")
     for obj in config.man_frames:
-        man = Manipulation(config, obj, slices=10)
         man_frame = config.getFrame(obj)
         masks = (seg_ids == man_frame.ID).astype(np.uint8)
         obj_group = man_group.create_group(obj)
         obj_group.create_dataset("masks", data=masks)
         prim_group = obj_group.create_group("primitives")
-        for primitive in man.primitives:
-            man.reset()
+        for primitive in Manipulation.primitives:
+            man = Manipulation(config, obj, slices=10)
             man.target_pos(target_pos)
             man.target_ori(man_frame.getRelativeQuaternion())
-            primitive()
+            getattr(man, primitive)()
             ret = man.solve()
-            prim_group.create_dataset(f"{primitive.__name__}_feasible", data=ret.feasible)
+            prim_group.create_dataset(f"{primitive}_feasible", data=ret.feasible)

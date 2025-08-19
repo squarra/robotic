@@ -11,24 +11,33 @@ table = "table"
 
 
 class Manipulation:
+    primitives = [
+        "pull_obj",
+        "push_obj_x",
+        "push_obj_y",
+        "push_obj_z",
+        "push_obj_x_neg",
+        "push_obj_y_neg",
+        "push_obj_z_neg",
+        "grasp_obj_x",
+        "grasp_obj_y",
+        "grasp_obj_z",
+    ]
+
     def __init__(self, scenario: Scenario, obj: str, slices=1, collisions=True):
-        self.intial_scenario = scenario
-        self.obj = obj
-        self.slices = slices
-        self.collisions = collisions
-        self.reset()
-
-        self.action = None
-
-    def reset(self):
-        self.komo = KOMO(self.intial_scenario, 2.0, self.slices, 1, self.collisions)
-        self.komo.set_viewer(self.intial_scenario.get_viewer())
+        self.komo = KOMO(scenario, 2.0, slices, 1, collisions)
+        self.komo.set_viewer(scenario.get_viewer())
         self.komo.addControlObjective([], 0, 1e-2)
         self.komo.addControlObjective([], 1, 1e-1)
         self.komo.addObjective([], FS.jointLimits, [], OT.ineq, [1e0])
 
-        if self.collisions:
+        if collisions:
             self.komo.addObjective([], FS.accumulatedCollisions, [], OT.eq, [1e0])
+
+        self.obj = obj
+        self.slices = slices
+
+        self.action = None
 
     def pull_obj(self):
         self.action = "pull"
@@ -133,21 +142,6 @@ class Manipulation:
     @property
     def config(self):
         return self.komo.getConfig()
-
-    @property
-    def primitives(self):
-        return [
-            self.pull_obj,
-            self.push_obj_x,
-            self.push_obj_y,
-            self.push_obj_z,
-            self.push_obj_x_neg,
-            self.push_obj_y_neg,
-            self.push_obj_z_neg,
-            self.grasp_obj_x,
-            self.grasp_obj_y,
-            self.grasp_obj_z,
-        ]
 
     def get_bbox(self, frame_name):
         vertices = self.config.getFrame(frame_name).getMesh()[0]
