@@ -34,6 +34,9 @@ class Scenario(Config):
         rgb = self.compute_rgbd()[0]
         return rgb_to_gray(rgb) if grayscale else rgb
 
+    def compute_depth(self):
+        return self.compute_rgbd()[0]
+
     def compute_seg_rgb(self) -> np.ndarray:
         """RGB-encoded frame IDs; IDs >= len(self.getFrames()) are background."""
         return self.camera_view.computeSegmentationImage(self)
@@ -46,14 +49,21 @@ class Scenario(Config):
         for man_frame in self.man_frames:
             self.delFrame(man_frame)
 
-    def compute_images_and_seg_ids(self, grayscale=False) -> np.ndarray:
-        images = []
-        seg_ids = []
+    def compute_images_and_seg_ids(self, grayscale=False):
+        images, seg_ids = [], []
         for pos in self.camera_positions:
             self.set_camera(pos)
             images.append(self.compute_image(grayscale))
             seg_ids.append(self.compute_seg_ids())
         return np.stack(images), np.stack(seg_ids)
+
+    def compute_depths_and_seg_ids(self):
+        depths, seg_ids = [], []
+        for pos in self.camera_positions:
+            self.set_camera(pos)
+            depths.append(self.compute_depth())
+            seg_ids.append(self.compute_seg_ids())
+        return np.stack(depths), np.stack(seg_ids)
 
     def compute_collisions(self):
         return self.getCollisions(verbose=DEBUG.value)
