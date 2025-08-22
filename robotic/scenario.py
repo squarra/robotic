@@ -35,7 +35,7 @@ class Scenario(Config):
         return rgb_to_gray(rgb) if grayscale else rgb
 
     def compute_depth(self):
-        return self.compute_rgbd()[0]
+        return self.compute_rgbd()[1]
 
     def compute_seg_rgb(self) -> np.ndarray:
         """RGB-encoded frame IDs; IDs >= len(self.getFrames()) are background."""
