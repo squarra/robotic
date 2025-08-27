@@ -12,7 +12,6 @@ table = "table"
 
 class Manipulation:
     primitives = [
-        "pull_obj",
         "push_obj_x",
         "push_obj_y",
         "push_obj_z",
@@ -24,50 +23,37 @@ class Manipulation:
         "grasp_obj_z",
     ]
 
-    def __init__(self, scenario: Scenario, obj: str, slices=1, collisions=True):
-        self.komo = KOMO(scenario, 2.0, slices, 1, collisions)
-        self.komo.set_viewer(scenario.get_viewer())
+    def __init__(self, scenario: Scenario, obj: str, slices=1):
+        self.komo = KOMO(scenario, 2.0, slices, 1, True)
         self.komo.addControlObjective([], 0, 1e-2)
         self.komo.addControlObjective([], 1, 1e-1)
         self.komo.addObjective([], FS.jointLimits, [], OT.ineq, [1e0])
-
-        if collisions:
-            self.komo.addObjective([], FS.accumulatedCollisions, [], OT.eq, [1e0])
-            for man_frame in scenario.man_frames:
-                if man_frame == obj:
-                    continue
-                self.komo.addObjective([0, 1], FS.negDistance, [obj, man_frame], OT.ineq, [1.0], [-0.01])
+        self.komo.addObjective([], FS.accumulatedCollisions, [], OT.eq, [1e0])
 
         self.obj = obj
         self.slices = slices
-
-        self.action = None
-
-    def pull_obj(self):
-        self.action = "pull"
-        self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
-        self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
-
-        helper_end = "_pull_end"
-        self.komo.addFrameDof(helper_end, table, JT.transXYPhi, True, self.obj)
-        self.komo.addObjective([1.0], FS.vectorZ, [gripper], OT.eq, [1e1], np.array([0, 0, 1]))
-        self.komo.addObjective([2.0], FS.vectorZ, [gripper], OT.eq, [1e1], np.array([0, 0, 1]))
-        self.komo.addObjective([1.0], FS.vectorZ, [self.obj], OT.eq, [1e1], np.array([0, 0, 1]))
-        self.komo.addObjective([2.0], FS.vectorZ, [self.obj], OT.eq, [1e1], np.array([0, 0, 1]))
-        self.komo.addObjective([2.0], FS.positionDiff, [self.obj, helper_end], OT.eq, [1e1])
-        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, 1e1 * np.eye(3)[:2], np.array([0, 0, 0]))
-        self.komo.addObjective([1.0], FS.negDistance, [gripper, self.obj], OT.eq, [1e1], [-0.005])
+        self.config = self.komo.getConfig()
 
     def _push_obj(self, dim: int, dir: int):
-        self.action = "push"
-        self.komo.addFrameDof("obj_trans", table, JT.transXY, False, self.obj)
+        if dim == 0:
+            joint = JT.transX
+        elif dim == 1:
+            joint = JT.transY
+        elif dim == 2:
+            joint = JT.transZ
+        else:
+            raise ValueError
+        self.komo.addFrameDof("obj_trans", table, joint, False, self.obj)
         self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
 
         y_axis = np.eye(3)[dim]
         xz_plane = np.delete(np.eye(3), dim, axis=0)
+        relative_gripper_contact_pos = 0.5 * self.get_bbox(self.obj)[dim] + 0.025
 
         # gripper position
-        target = -dir * (0.5 * self.get_bbox(self.obj)[dim] + 0.025)
+        pre_target = -dir * (relative_gripper_contact_pos + 0.01)
+        self.komo.addObjective([0.8], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[pre_target])
+        target = -dir * relative_gripper_contact_pos
         self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[target])
         self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=xz_plane * 1e1)
         # gripper orientation
@@ -95,7 +81,6 @@ class Manipulation:
         self._push_obj(2, -1)
 
     def _grasp_obj(self, dim: int, align: tuple):
-        self.action = "grasp"
         self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
         self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
 
@@ -132,9 +117,6 @@ class Manipulation:
         return sol.solve(verbose=DEBUG.value)
 
     def view(self, **kwargs):
-        self.config.view(**kwargs)
-
-    def view_komo(self, **kwargs):
         self.komo.view(**kwargs)
 
     def get_grasp_pose(self) -> np.ndarray:
@@ -142,10 +124,6 @@ class Manipulation:
 
     def get_grasp_transform(self) -> np.ndarray:
         return self.komo.getFrame(gripper, 1).getTransform()
-
-    @property
-    def config(self):
-        return self.komo.getConfig()
 
     def get_bbox(self, frame_name):
         vertices = self.config.getFrame(frame_name).getMesh()[0]
@@ -167,12 +145,11 @@ class Manipulation:
             time.sleep(tau)
             self.config.view()
 
-        if self.action in ["push", "grasp"]:
-            sim.moveGripper(gripper, 0.0)
-            while not sim.gripperIsDone(gripper):
-                sim.step([], tau, ControlMode.spline)
-                time.sleep(tau)
-                self.config.view()
+        sim.moveGripper(gripper, 0.0)
+        while not sim.gripperIsDone(gripper):
+            sim.step([], tau, ControlMode.spline)
+            time.sleep(tau)
+            self.config.view()
 
         sim.setSplineRef(path=splits[1], times=[1])
         for _ in range(sim_steps):

@@ -108,7 +108,7 @@ class PandaScenario(Scenario):
 
     def add_boxes_to_scene(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.16), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
-        n_objects = np.random.randint(*num_boxes_range)
+        n_objects = rng.integers(*num_boxes_range)
 
         # Keep objects within table bounds
         table_x, table_y, table_z = self.table.getSize()[:3]
