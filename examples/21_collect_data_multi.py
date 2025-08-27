@@ -17,9 +17,9 @@ from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
 config = PandaScenario()
-num_scenes = 1
+num_scenes = 10
 
-setLogLevel(-1)
+setLogLevel(-1)  #  to suppress pairCollision.cpp:libccd:380(0) WARNING: but GJK says intersection
 
 
 def solve_primitive(args):
@@ -37,19 +37,18 @@ with h5py.File("dataset.h5", "w") as f:
         depths, seg_ids = config.compute_depths_and_seg_ids()
 
         dp_group = f.create_group(f"datapoint_{scene_id:04d}")
-        dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
+        dp_group.create_dataset("depths", data=depths)
         dp_group.create_dataset("camera_positions", data=config.camera_positions)
         man_group = dp_group.create_group("manipulations")
 
         jobs = []
         for obj in config.man_frames:
             man_frame = config.getFrame(obj)
-            masks = (seg_ids == man_frame.ID).astype(np.uint8)
-
             obj_group = man_group.create_group(obj)
-            obj_group.create_dataset("masks", data=masks, compression="gzip", chunks=True)
-            prim_group = obj_group.create_group("primitives")
+            obj_group.create_dataset("quat", data=man_frame.getRelativeQuaternion().astype(np.float32))
+            obj_group.create_dataset("masks", data=(seg_ids == man_frame.ID).astype(np.uint8))
 
+            prim_group = obj_group.create_group("primitives")
             for primitive in Manipulation.primitives:
                 jobs.append((obj, primitive))
 
