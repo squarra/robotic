@@ -12,6 +12,14 @@ Then unzip and just `pip install open3d-0.19.0-cp313-cp313-manylinux_2_35_x86_64
 
 The patches I applied to rai with their respective git tags
 
+### v0.1.5
+
+- I wanted to be able to push an object along the table in just one axis. Prior I had a transXY joint there. Now depending on the appraoch angle I only push along one axis. For that i had to implement auto limits for the three new joint types.
+
+### v0.1.4
+
+- Added a binding for `setLogLevel()`
+
 ### v0.1.3
 
 - When deleting a frame with `delFrame()`, the viewer gets the new state as well. This should actually be patched in cpp I think.
@@ -26,3 +34,8 @@ The patches I applied to rai with their respective git tags
 ### v0.1.1
 
 - Fixed pybind mapping for `computeSegmentationID()`
+
+## Todo
+
+- Imporve the primitives
+- Train a model
