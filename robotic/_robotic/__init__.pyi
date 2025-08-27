@@ -1932,6 +1932,11 @@ def raiPath(*args, **kwargs):
 
     get a path relative to rai base path
     """
+def setLogLevel(consoleLevel: int) -> None:
+    """setLogLevel(consoleLevel: int) -> None
+
+    set the console log level
+    """
 def setRaiPath(arg0: str) -> None:
     """setRaiPath(arg0: str) -> None
 

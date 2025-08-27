@@ -10,12 +10,16 @@ from multiprocessing import Pool
 
 import h5py
 import numpy as np
+import tqdm
 
+from robotic._robotic import setLogLevel
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
 config = PandaScenario()
-num_scenes = 3
+num_scenes = 1
+
+setLogLevel(-1)
 
 
 def solve_primitive(args):
@@ -27,7 +31,7 @@ def solve_primitive(args):
 
 
 with h5py.File("dataset.h5", "w") as f:
-    for scene_id in range(num_scenes):
+    for scene_id in tqdm.trange(num_scenes):
         config.delete_man_frames()
         config.add_boxes_to_scene((2, 10), seed=scene_id)
         depths, seg_ids = config.compute_depths_and_seg_ids()
@@ -54,4 +58,4 @@ with h5py.File("dataset.h5", "w") as f:
 
         for obj, primitive_name, feasible in results:
             prim_group = man_group[obj]["primitives"]
-            prim_group.create_dataset(f"{primitive_name}_feasible", data=feasible)
+            prim_group.create_dataset(primitive_name, data=feasible)

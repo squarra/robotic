@@ -24,6 +24,15 @@ class Scenario(Config):
         self.camera_positions = camera_positions
         self.env_frames = set(self.getFrameNames())
 
+    def add_markers(self):
+        for i, obj in enumerate(self.man_frames):
+            self.addFrame(f"marker{i}", obj).setShape(ST.marker, [0.2])
+
+    def remove_markers(self):
+        for frame in self.getFrameNames():
+            if "marker" in frame:
+                self.delFrame(frame)
+
     def set_camera(self, position: np.typing.ArrayLike):
         self.camera.setRelativePosition(position).setRotationMatrix(compute_look_at_matrix(self.camera.getPosition(), self.world.getPosition()))
 
@@ -92,6 +101,11 @@ class PandaScenario(Scenario):
 
         self.env_frames = set(self.getFrameNames())
 
+    def add_topdown_camera(self, height=1.5):
+        table_pos = self.table.getPosition()
+        cam_pos = np.array([table_pos[0], table_pos[1], table_pos[2] + height])
+        self.camera_positions = np.vstack([self.camera_positions, cam_pos])
+
     def add_boxes_to_scene(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.16), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
         n_objects = np.random.randint(*num_boxes_range)
@@ -124,6 +138,48 @@ class PandaScenario(Scenario):
                 y = np.random.uniform(-max_pos_y, max_pos_y)
                 z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
                 box.setRelativePosition([x, y, z])
+                box.ensure_X()
+                if not self.compute_collisions():
+                    placed = True
+                    break
+            if not placed:
+                self.delFrame(box.name)
+
+    def add_boxes_to_scene_canonical(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.12), seed=None, max_tries=100):
+        rng = np.random.default_rng(seed)
+        n_objects = np.random.randint(*num_boxes_range)
+
+        # Keep objects within table bounds
+        table_x, table_y, table_z = self.table.getSize()[:3]
+        max_pos_x = table_x / 2 - box_size_range[1] / 2
+        max_pos_y = table_y / 2 - box_size_range[1] / 2
+
+        for i in range(n_objects):
+            x, y, z = rng.uniform(*box_size_range, size=(3,))
+
+            # Enforce heuristic: z stays as-is, x >= y
+            if y > x:
+                x, y = y, x
+            canonical_size = np.array([x, y, z])
+
+            # Random rotation only around z-axis
+            rot = random_z_rotation_matrix()
+            quat = matrix_to_quat(rot)
+
+            box = (
+                self.addFrame(f"box{i}", "table")
+                .setJoint(JT.rigid)
+                .setShape(ST.ssBox, [*canonical_size, 0.005])
+                .setRelativeQuaternion(quat)
+                .setContact(1)
+            )
+
+            placed = False
+            for _ in range(max_tries):
+                x_pos = np.random.uniform(-max_pos_x, max_pos_x)
+                y_pos = np.random.uniform(-max_pos_y, max_pos_y)
+                z_pos = table_z / 2 + canonical_size[2] / 2 + np.finfo(np.float32).eps
+                box.setRelativePosition([x_pos, y_pos, z_pos])
                 box.ensure_X()
                 if not self.compute_collisions():
                     placed = True

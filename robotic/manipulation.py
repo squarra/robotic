@@ -33,6 +33,10 @@ class Manipulation:
 
         if collisions:
             self.komo.addObjective([], FS.accumulatedCollisions, [], OT.eq, [1e0])
+            for man_frame in scenario.man_frames:
+                if man_frame == obj:
+                    continue
+                self.komo.addObjective([0, 1], FS.negDistance, [obj, man_frame], OT.ineq, [1.0], [-0.01])
 
         self.obj = obj
         self.slices = slices
