@@ -809,6 +809,11 @@ class Frame:
         """the unique ID of the frame, which is also its index in lists/arrays (e.g. when the frameState is returned as matrix) (readonly)
         (self: _robotic.Frame) -> int
         """
+    @property
+    def joint(self) -> Joint:
+        """the joint of the frame
+        (self: _robotic.Frame) -> _robotic.Joint
+        """
 
 class JT:
     """Members:
@@ -892,6 +897,13 @@ class JT:
     @property
     def value(self) -> int:
         """(arg0: _robotic.JT) -> int"""
+
+class Joint:
+    """A joint of a frame"""
+    limits: arr
+    q0: arr
+    def __init__(self, *args, **kwargs) -> None:
+        """Initialize self.  See help(type(self)) for accurate signature."""
 
 class KOMO:
     """A framework to define manipulation problems (IK, path optimization, sequential manipulation) as Nonlinear Mathematical Program (NLP). The actual NLP_Solver class is separate. (KOMO = k-order Markov Optimization) -- see https://marctoussaint.github.io/robotics-course/tutorials/1c-komo.html"""
