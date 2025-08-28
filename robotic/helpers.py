@@ -155,3 +155,7 @@ def rotation_matrices_for_up():
 def matrix_to_quat(rotation_matrix: np.typing.ArrayLike):
     """Helper since rai::Quaternion::setMatrix can be unstable"""
     return np.roll(R.from_matrix(rotation_matrix).as_quat(), 1)
+
+
+def quat_to_matrix(quaternion: np.typing.ArrayLike):
+    return R.from_quat(np.roll(quaternion, -1)).as_matrix()
