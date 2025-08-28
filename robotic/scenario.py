@@ -92,7 +92,7 @@ class PandaScenario(Scenario):
         super().__init__(generate_circular_camera_positions(1.0, 3, [2.0]))
         self.table = (
             self.addFrame("table", "world")
-            .setShape(ST.ssBox, [1.5, 1.5, 0.1, 0.02])
+            .setShape(ST.ssBox, [1.2, 1.2, 0.1, 0.02])
             .setColor([0.3, 0.3, 0.3])
             .setContact(1)
             .setAttributes({"friction": 0.1, "logical": 0})
@@ -117,7 +117,7 @@ class PandaScenario(Scenario):
 
         for i in range(n_objects):
             size = rng.uniform(*box_size_range, size=(3))
-            rot = random_z_rotation_matrix()
+            rot = random_z_rotation_matrix(rng)
 
             # Randomize orientation (up-axis + z-rotation) and reorder size to match
             up_rot = rng.choice(rotation_matrices_for_up())
@@ -134,8 +134,8 @@ class PandaScenario(Scenario):
 
             placed = False
             for _ in range(max_tries):
-                x = np.random.uniform(-max_pos_x, max_pos_x)
-                y = np.random.uniform(-max_pos_y, max_pos_y)
+                x = rng.uniform(-max_pos_x, max_pos_x)
+                y = rng.uniform(-max_pos_y, max_pos_y)
                 z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
                 box.setRelativePosition([x, y, z])
                 box.ensure_X()
@@ -147,7 +147,7 @@ class PandaScenario(Scenario):
 
     def add_boxes_to_scene_canonical(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.12), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
-        n_objects = np.random.randint(*num_boxes_range)
+        n_objects = rng.randint(*num_boxes_range)
 
         # Keep objects within table bounds
         table_x, table_y, table_z = self.table.getSize()[:3]
@@ -176,8 +176,8 @@ class PandaScenario(Scenario):
 
             placed = False
             for _ in range(max_tries):
-                x_pos = np.random.uniform(-max_pos_x, max_pos_x)
-                y_pos = np.random.uniform(-max_pos_y, max_pos_y)
+                x_pos = rng.uniform(-max_pos_x, max_pos_x)
+                y_pos = rng.uniform(-max_pos_y, max_pos_y)
                 z_pos = table_z / 2 + canonical_size[2] / 2 + np.finfo(np.float32).eps
                 box.setRelativePosition([x_pos, y_pos, z_pos])
                 box.ensure_X()

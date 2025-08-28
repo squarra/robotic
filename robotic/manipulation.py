@@ -35,8 +35,10 @@ class Manipulation:
         self.obj = obj
         self.slices = slices
         self.config = self.komo.getConfig()
+        self.action = None
 
     def _push_obj(self, dim: int, dir: int):
+        self.action = "push"
         if dim == 0:
             joint = JT.transX
         elif dim == 1:
@@ -83,6 +85,7 @@ class Manipulation:
         self._push_obj(2, -1)
 
     def _grasp_obj(self, dim: int, align: tuple):
+        self.action = "grasp"
         self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
         self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
 
@@ -161,7 +164,7 @@ class Manipulation:
 
         return np.max(vertices, axis=0) - np.min(vertices, axis=0)
 
-    def simulate(self, view=True, times=2.0, tau=5e-3):
+    def simulate(self, view=True, times=1.0, tau=5e-3):
         sim = Simulation(self.config, SimulationEngine.physx, verbose=DEBUG.value)
         sim_steps = int(times // tau)
         splits = np.split(self.komo.getPath(), [self.slices])
@@ -173,7 +176,10 @@ class Manipulation:
                 time.sleep(tau)
                 self.config.view()
 
-        sim.moveGripper(gripper, 0.0)
+        if self.action == "grasp":
+            sim.moveGripper(gripper, 0.0)
+        else:
+            sim.moveGripper(gripper, 0.04)
         while not sim.gripperIsDone(gripper):
             sim.step([], tau, ControlMode.spline)
             if view:

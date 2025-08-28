@@ -136,8 +136,8 @@ def generate_circular_camera_positions(radius: float, num_views: int, heights: l
     return np.stack(positions)
 
 
-def random_z_rotation_matrix():
-    theta = np.random.uniform(0, 2 * np.pi)
+def random_z_rotation_matrix(rng):
+    theta = rng.uniform(0, 2 * np.pi)
     return np.array([[np.cos(theta), -np.sin(theta), 0], [np.sin(theta), np.cos(theta), 0], [0, 0, 1]])
 
 
