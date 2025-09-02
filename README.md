@@ -12,10 +12,10 @@ stubgen -p _robotic -o . --include-docstrings
 
 ## Setting up the environment
 
-We use uv for best reproducibility
+We use uv for best reproducibility. Here is how to get started if you want to run the examples.
 
 ```sh
-uv sync
+uv sync --group examples
 source .venv/bin/activate
 uv pip install -e .
 ```
