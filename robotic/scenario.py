@@ -74,6 +74,16 @@ class Scenario(Config):
             seg_ids.append(self.compute_seg_ids())
         return np.stack(depths), np.stack(seg_ids)
 
+    def compute_images_depths_and_seg_ids(self):
+        images, depths, seg_ids = [], [], []
+        for pos in self.camera_positions:
+            self.set_camera(pos)
+            image, depth = self.compute_rgbd()
+            images.append(image)
+            depths.append(depth)
+            seg_ids.append(self.compute_seg_ids())
+        return np.stack(images), np.stack(depths), np.stack(seg_ids)
+
     def compute_collisions(self):
         return self.getCollisions(verbose=DEBUG.value)
 
@@ -106,7 +116,7 @@ class PandaScenario(Scenario):
         cam_pos = np.array([table_pos[0], table_pos[1], table_pos[2] + height])
         self.camera_positions = np.vstack([self.camera_positions, cam_pos])
 
-    def add_boxes_to_scene(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.16), seed=None, max_tries=100):
+    def add_boxes_to_scene(self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.08), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)
 
@@ -145,41 +155,24 @@ class PandaScenario(Scenario):
             if not placed:
                 self.delFrame(box.name)
 
-    def add_boxes_to_scene_canonical(self, num_boxes_range=(2, 6), box_size_range=(0.02, 0.12), seed=None, max_tries=100):
+    def add_boxes_to_scene_simple(self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.08), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
-        n_objects = rng.randint(*num_boxes_range)
+        n_objects = rng.integers(*num_boxes_range)
 
-        # Keep objects within table bounds
         table_x, table_y, table_z = self.table.getSize()[:3]
         max_pos_x = table_x / 2 - box_size_range[1] / 2
         max_pos_y = table_y / 2 - box_size_range[1] / 2
 
         for i in range(n_objects):
-            x, y, z = rng.uniform(*box_size_range, size=(3,))
-
-            # Enforce heuristic: z stays as-is, x >= y
-            if y > x:
-                x, y = y, x
-            canonical_size = np.array([x, y, z])
-
-            # Random rotation only around z-axis
-            rot = random_z_rotation_matrix()
-            quat = matrix_to_quat(rot)
-
-            box = (
-                self.addFrame(f"box{i}", "table")
-                .setJoint(JT.rigid)
-                .setShape(ST.ssBox, [*canonical_size, 0.005])
-                .setRelativeQuaternion(quat)
-                .setContact(1)
-            )
+            size = rng.uniform(*box_size_range, size=3)
+            box = self.addFrame(f"box{i}", "table").setJoint(JT.rigid).setShape(ST.ssBox, [*size, 0.005]).setContact(1)
 
             placed = False
             for _ in range(max_tries):
-                x_pos = rng.uniform(-max_pos_x, max_pos_x)
-                y_pos = rng.uniform(-max_pos_y, max_pos_y)
-                z_pos = table_z / 2 + canonical_size[2] / 2 + np.finfo(np.float32).eps
-                box.setRelativePosition([x_pos, y_pos, z_pos])
+                x = rng.uniform(-max_pos_x, max_pos_x)
+                y = rng.uniform(-max_pos_y, max_pos_y)
+                z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
+                box.setRelativePosition([x, y, z])
                 box.ensure_X()
                 if not self.compute_collisions():
                     placed = True

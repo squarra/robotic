@@ -11,17 +11,7 @@ table = "table"
 
 
 class Manipulation:
-    primitives = [
-        "push_obj_x",
-        "push_obj_y",
-        "push_obj_z",
-        "push_obj_x_neg",
-        "push_obj_y_neg",
-        "push_obj_z_neg",
-        "grasp_obj_x",
-        "grasp_obj_y",
-        "grasp_obj_z",
-    ]
+    primitives = ["push_x_pos", "push_y_pos", "push_z_pos", "push_x_neg", "push_y_neg", "push_z_neg", "grasp_x", "grasp_y", "grasp_z"]
 
     def __init__(self, scenario: PandaScenario, obj: str, slices=1):
         self.scenario = scenario
@@ -66,22 +56,22 @@ class Manipulation:
         self.komo.addObjective([1.0, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, [1e0], [y_axis[1]])
         self.komo.addObjective([1.0, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, [1e0], [y_axis[2]])
 
-    def push_obj_x(self):
+    def push_x_pos(self):
         self._push_obj(0, 1)
 
-    def push_obj_y(self):
+    def push_y_pos(self):
         self._push_obj(1, 1)
 
-    def push_obj_z(self):
+    def push_z_pos(self):
         self._push_obj(2, 1)
 
-    def push_obj_x_neg(self):
+    def push_x_neg(self):
         self._push_obj(0, -1)
 
-    def push_obj_y_neg(self):
+    def push_y_neg(self):
         self._push_obj(1, -1)
 
-    def push_obj_z_neg(self):
+    def push_z_neg(self):
         self._push_obj(2, -1)
 
     def _grasp_obj(self, dim: int, align: tuple):
@@ -102,13 +92,13 @@ class Manipulation:
         self.komo.addObjective([0.8, 1.0], align[0], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
         self.komo.addObjective([0.8, 1.0], align[1], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
 
-    def grasp_obj_x(self):
+    def grasp_x(self):
         self._grasp_obj(0, [FS.scalarProductXY, FS.scalarProductXZ])
 
-    def grasp_obj_y(self):
+    def grasp_y(self):
         self._grasp_obj(1, [FS.scalarProductXX, FS.scalarProductXZ])
 
-    def grasp_obj_z(self):
+    def grasp_z(self):
         self._grasp_obj(2, [FS.scalarProductXX, FS.scalarProductXY])
 
     def target_pos_up_axis(self, dim: int, dir: int, align: FS, pos: np.typing.ArrayLike):
@@ -179,7 +169,7 @@ class Manipulation:
         if self.action == "grasp":
             sim.moveGripper(gripper, 0.0)
         else:
-            sim.moveGripper(gripper, 0.04)
+            sim.moveGripper(gripper, 0.02)
         while not sim.gripperIsDone(gripper):
             sim.step([], tau, ControlMode.spline)
             if view:

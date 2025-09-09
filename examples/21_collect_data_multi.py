@@ -16,45 +16,68 @@ from robotic._robotic import setLogLevel
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
-config = PandaScenario()
-num_scenes = 10
+DATASET_PATH = "dataset.h5"
+NUM_SCENES = 1
+SLICES = 10  # fewer slices = more speed
 
-setLogLevel(-1)  #  to suppress pairCollision.cpp:libccd:380(0) WARNING: but GJK says intersection
+setLogLevel(-1)
+
+config = PandaScenario()
 
 
 def solve_primitive(args):
-    obj, primitive = args
-    man = Manipulation(config, obj, slices=10)  # fewer slices = more speed
-    getattr(man, primitive)()
+    obj, primitive_name = args
+    man = Manipulation(config, obj, slices=SLICES)
+    frame = man.config.getFrame(obj)
+    if "push" in primitive_name:
+        _, primitive_dim, primitive_dir = primitive_name.split("_")
+        axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
+        direction = {"pos": 1, "neg": -1}[primitive_dir]
+        offset = np.zeros(3)
+        offset[axis] = 0.05 * direction  # push 5cm in the specified direction
+        offset = man_frame.getRotationMatrix() @ offset
+        target_pos = man_frame.getRelativePosition() + offset
+        man.target_pos(target_pos)
+
+    getattr(man, primitive_name)()
     ret = man.solve()
-    return obj, primitive, ret.feasible
+    if ret.feasible:
+        man.simulate(view=False)
+    pose = frame.getRelativePose()
+    return obj, primitive_name, ret.feasible, pose
 
 
-with h5py.File("dataset.h5", "w") as f:
-    for scene_id in tqdm.trange(num_scenes):
+with h5py.File(DATASET_PATH, "w") as f:
+    for scene_id in tqdm.trange(NUM_SCENES):
         config.delete_man_frames()
-        config.add_boxes_to_scene((2, 10), seed=scene_id)
-        depths, seg_ids = config.compute_depths_and_seg_ids()
+        config.add_boxes_to_scene(seed=scene_id)
+
+        images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
         dp_group = f.create_group(f"datapoint_{scene_id:04d}")
-        dp_group.create_dataset("depths", data=depths)
         dp_group.create_dataset("camera_positions", data=config.camera_positions)
-        man_group = dp_group.create_group("manipulations")
+        dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
+        dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
+        dp_group.create_dataset("seg_ids", data=seg_ids, compression="gzip", chunks=True)
 
+        objects_group = dp_group.create_group("objects")
         jobs = []
         for obj in config.man_frames:
             man_frame = config.getFrame(obj)
-            obj_group = man_group.create_group(obj)
-            obj_group.create_dataset("quat", data=man_frame.getRelativeQuaternion().astype(np.float32))
-            obj_group.create_dataset("masks", data=(seg_ids == man_frame.ID).astype(np.uint8))
+            obj_group = objects_group.create_group(obj)
 
-            prim_group = obj_group.create_group("primitives")
+            obj_group.create_dataset("pose", data=man_frame.getRelativePose().astype(np.float32))
+            obj_group.create_dataset("size", data=man_frame.getSize()[:3].astype(np.float32))
+
+            obj_group.create_group("primitives")
             for primitive in Manipulation.primitives:
                 jobs.append((obj, primitive))
 
         with Pool() as pool:
             results = pool.map(solve_primitive, jobs)
 
-        for obj, primitive_name, feasible in results:
-            prim_group = man_group[obj]["primitives"]
-            prim_group.create_dataset(primitive_name, data=feasible)
+        for obj, primitive_name, feasible, pose in results:
+            prim_group = objects_group[obj]["primitives"]
+            primitive_group = prim_group.create_group(primitive_name)
+            primitive_group.create_dataset("feasible", data=feasible)
+            primitive_group.create_dataset("pose", data=pose.astype(np.float32))
