@@ -154,28 +154,3 @@ class PandaScenario(Scenario):
                     break
             if not placed:
                 self.delFrame(box.name)
-
-    def add_boxes_to_scene_simple(self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.08), seed=None, max_tries=100):
-        rng = np.random.default_rng(seed)
-        n_objects = rng.integers(*num_boxes_range)
-
-        table_x, table_y, table_z = self.table.getSize()[:3]
-        max_pos_x = table_x / 2 - box_size_range[1] / 2
-        max_pos_y = table_y / 2 - box_size_range[1] / 2
-
-        for i in range(n_objects):
-            size = rng.uniform(*box_size_range, size=3)
-            box = self.addFrame(f"box{i}", "table").setJoint(JT.rigid).setShape(ST.ssBox, [*size, 0.005]).setContact(1)
-
-            placed = False
-            for _ in range(max_tries):
-                x = rng.uniform(-max_pos_x, max_pos_x)
-                y = rng.uniform(-max_pos_y, max_pos_y)
-                z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
-                box.setRelativePosition([x, y, z])
-                box.ensure_X()
-                if not self.compute_collisions():
-                    placed = True
-                    break
-            if not placed:
-                self.delFrame(box.name)
