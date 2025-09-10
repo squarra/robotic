@@ -7,7 +7,7 @@ import numpy as np
 import trimesh
 from scipy.spatial.transform import Rotation as R
 
-from robotic._robotic import KOMO, Config
+from robotic._robotic import KOMO, Config, setLogLevel
 
 
 @functools.cache
@@ -54,6 +54,8 @@ class ContextVar:
 
 
 DEBUG = ContextVar("DEBUG", 0)
+LOG_LEVEL = ContextVar("LOG", 0)
+setLogLevel(LOG_LEVEL.value)
 
 
 def get_mesh(config: Config, frame_name: str, colors=True, transform=True) -> trimesh.Trimesh:

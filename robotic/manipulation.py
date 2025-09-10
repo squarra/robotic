@@ -131,6 +131,9 @@ class Manipulation:
     def target_quat(self, ori: np.typing.ArrayLike):
         self.komo.addObjective([2.0], FS.quaternionRel, [self.obj, table], OT.eq, scale=[1e1], target=ori)
 
+    def target_pose(self, pose: np.typing.ArrayLike):
+        self.komo.addObjective([2.0], FS.poseRel, [self.obj, table], OT.eq, scale=[1e1], target=pose)
+
     def solve(self):
         sol = NLP_Solver(self.komo.nlp(), DEBUG.value)
         sol.setOptions(damping=1e-1, stopTolerance=1e-3, lambdaMax=100.0, stopInners=20, stopEvals=200)
