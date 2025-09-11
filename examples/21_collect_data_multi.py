@@ -17,7 +17,8 @@ from robotic.scenario import PandaScenario
 
 DATASET_PATH = "dataset.h5"
 NUM_SCENES = 2000
-SLICES = 10  # fewer slices = more speed
+START_SEED = 0
+SLICES = 10  # fewer slices = faster but less accurate
 POS_OFFSET = 0.05  # move 5cm along the push/grasp axis
 
 config = PandaScenario()
@@ -53,14 +54,15 @@ def solve_primitive(args):
 
 
 with h5py.File(DATASET_PATH, "w") as f:
-    for scene_id in tqdm.trange(NUM_SCENES):
+    for i in tqdm.trange(NUM_SCENES):
+        seed = START_SEED + i
         config.delete_man_frames()
-        config.add_boxes_to_scene(seed=scene_id)
+        config.add_boxes_to_scene(seed=seed)
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
-        dp_group = f.create_group(f"datapoint_{scene_id:04d}")
-        dp_group.attrs["seed"] = scene_id
+        dp_group = f.create_group(f"datapoint_{seed:04d}")
+        dp_group.attrs["seed"] = seed
         dp_group.create_dataset("camera_positions", data=config.camera_positions)
         dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
         dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
