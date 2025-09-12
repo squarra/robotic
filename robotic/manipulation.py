@@ -40,6 +40,9 @@ class Manipulation:
         self.config = self.komo.getConfig()
         self.action = None
 
+        for obj in self.scenario.man_frames:
+            self.komo.addObjective([], FS.distance, ["palm", obj], OT.ineq, scale=[1e1], target=[-0.001])
+
     def _push_obj(self, dim: int, dir: int):
         self.action = "push"
         if dim == 0:
@@ -92,7 +95,6 @@ class Manipulation:
     def _grasp_obj(self, dim: int, dir: int):
         self.action = "grasp"
         products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
-        align = products[dim:] + products[:dim]  # rotate so that index dim is first
 
         self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
         self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
@@ -102,14 +104,12 @@ class Manipulation:
 
         # gripper position
         target = 0.5 * self.get_bbox(self.obj) - 0.02
-        self.komo.addObjective([0.8, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
-        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e1, target=[target])
-        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * (-1e1), target=[-target])
+        self.komo.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e0, target=[target])
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * (-1e0), target=[-target])
         self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=[1e-1])
         # gripper orientation
-        self.komo.addObjective([0.8, 1.0], align[0], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
-        self.komo.addObjective([0.8, 1.0], align[1], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
-        self.komo.addObjective([0.8, 1.0], align[2], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        self.komo.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
 
     def grasp_x_pos(self):
         self._grasp_obj(0, 1)
