@@ -116,6 +116,9 @@ class PandaScenario(Scenario):
         cam_pos = np.array([table_pos[0], table_pos[1], table_pos[2] + height])
         self.camera_positions = np.vstack([self.camera_positions, cam_pos])
 
+    def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
+        return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
+
     def add_boxes_to_scene(self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.08), seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)

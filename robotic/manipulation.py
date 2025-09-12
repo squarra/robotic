@@ -52,9 +52,11 @@ class Manipulation:
         self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=xz_plane * 1e1)
         # gripper orientation
         self.komo.addObjective([1.0, 2.0], FS.vectorZ, [gripper], OT.eq, [1e0], [0, 0, 1])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYX, [gripper, self.obj], OT.eq, [1e0], [y_axis[0]])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, [1e0], [y_axis[1]])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, [1e0], [y_axis[2]])
+        self.komo.addObjective([1.0, 2.0], FS.scalarProductYX, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[0]])
+        self.komo.addObjective([1.0, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[1]])
+        self.komo.addObjective([1.0, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[2]])
+        # allow movement in only one direction
+        self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis * 1e0, target=[0], order=1)
 
     def push_x_pos(self):
         self._push_obj(0, 1)
