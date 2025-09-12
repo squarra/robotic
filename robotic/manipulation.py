@@ -11,7 +11,20 @@ table = "table"
 
 
 class Manipulation:
-    primitives = ["push_x_pos", "push_y_pos", "push_z_pos", "push_x_neg", "push_y_neg", "push_z_neg", "grasp_x", "grasp_y", "grasp_z"]
+    primitives = [
+        "push_x_pos",
+        "push_y_pos",
+        "push_z_pos",
+        "push_x_neg",
+        "push_y_neg",
+        "push_z_neg",
+        "grasp_x_pos",
+        "grasp_x_neg",
+        "grasp_y_pos",
+        "grasp_y_neg",
+        "grasp_z_pos",
+        "grasp_z_neg",
+    ]
 
     def __init__(self, scenario: PandaScenario, obj: str, slices=1):
         self.scenario = scenario
@@ -61,23 +74,26 @@ class Manipulation:
     def push_x_pos(self):
         self._push_obj(0, 1)
 
-    def push_y_pos(self):
-        self._push_obj(1, 1)
-
-    def push_z_pos(self):
-        self._push_obj(2, 1)
-
     def push_x_neg(self):
         self._push_obj(0, -1)
+
+    def push_y_pos(self):
+        self._push_obj(1, 1)
 
     def push_y_neg(self):
         self._push_obj(1, -1)
 
+    def push_z_pos(self):
+        self._push_obj(2, 1)
+
     def push_z_neg(self):
         self._push_obj(2, -1)
 
-    def _grasp_obj(self, dim: int, align: tuple):
+    def _grasp_obj(self, dim: int, dir: int):
         self.action = "grasp"
+        products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
+        align = products[dim:] + products[:dim]  # rotate so that index dim is first
+
         self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
         self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
 
@@ -91,17 +107,27 @@ class Manipulation:
         self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * (-1e1), target=[-target])
         self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=[1e-1])
         # gripper orientation
-        self.komo.addObjective([0.8, 1.0], align[0], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        self.komo.addObjective([0.8, 1.0], align[0], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
         self.komo.addObjective([0.8, 1.0], align[1], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        self.komo.addObjective([0.8, 1.0], align[2], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
 
-    def grasp_x(self):
-        self._grasp_obj(0, [FS.scalarProductXY, FS.scalarProductXZ])
+    def grasp_x_pos(self):
+        self._grasp_obj(0, 1)
 
-    def grasp_y(self):
-        self._grasp_obj(1, [FS.scalarProductXX, FS.scalarProductXZ])
+    def grasp_x_neg(self):
+        self._grasp_obj(0, -1)
 
-    def grasp_z(self):
-        self._grasp_obj(2, [FS.scalarProductXX, FS.scalarProductXY])
+    def grasp_y_pos(self):
+        self._grasp_obj(1, 1)
+
+    def grasp_y_neg(self):
+        self._grasp_obj(1, -1)
+
+    def grasp_z_pos(self):
+        self._grasp_obj(2, 1)
+
+    def grasp_z_neg(self):
+        self._grasp_obj(2, -1)
 
     def target_pos_up_axis(self, dim: int, dir: int, align: FS, pos: np.typing.ArrayLike):
         """Places the object on top of the table at a certain position with the specified up axis"""
