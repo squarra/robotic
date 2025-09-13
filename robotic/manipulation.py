@@ -3,6 +3,7 @@ import time
 import numpy as np
 
 from robotic import FS, JT, KOMO, OT, ControlMode, NLP_Solver, Simulation, SimulationEngine
+from robotic._robotic import ST
 from robotic.helpers import DEBUG
 from robotic.scenario import PandaScenario
 
@@ -32,9 +33,9 @@ class Manipulation:
         "pull_z_neg",
     ]
 
-    def __init__(self, scenario: PandaScenario, obj: str, slices=1):
+    def __init__(self, scenario: PandaScenario, obj: str, phases=2.0, slices=1):
         self.scenario = scenario
-        self.komo = KOMO(scenario, 2.0, slices, 1, True)
+        self.komo = KOMO(scenario, phases, slices, 1, True)
         self.komo.addControlObjective([], 0, 1e-2)
         self.komo.addControlObjective([], 1, 1e-1)
         self.komo.addObjective([], FS.jointLimits, [], OT.ineq, [1e0])
@@ -42,12 +43,18 @@ class Manipulation:
         self.komo.addQuaternionNorms()
 
         self.obj = obj
+        self.phases = phases
         self.slices = slices
         self.config = self.komo.getConfig()
         self.action = None
 
-        for obj in self.scenario.man_frames:
-            self.komo.addObjective([], FS.distance, ["palm", obj], OT.ineq, scale=[1e1], target=[-0.001])
+        for frame in self.scenario.man_frames:
+            if frame == self.obj or self.scenario.getFrame(frame).getShapeType() == ST.marker:
+                continue
+            self.komo.addObjective([], FS.distance, [frame, "palm"], OT.ineq, scale=[1e1], target=[-0.01])
+            self.komo.addObjective([], FS.distance, [frame, "finger1"], OT.ineq, scale=[1e1], target=[-0.01])
+            self.komo.addObjective([], FS.distance, [frame, "finger2"], OT.ineq, scale=[1e1], target=[-0.01])
+            self.komo.addObjective([], FS.distance, [frame, self.obj], OT.ineq, scale=[1e1], target=[-0.05])
 
     def _push_obj(self, dim: int, dir: int):
         self.action = "push"
@@ -70,15 +77,15 @@ class Manipulation:
         pre_target = -dir * (relative_gripper_contact_pos + 0.01)
         self.komo.addObjective([0.8], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[pre_target])
         target = -dir * relative_gripper_contact_pos
-        self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[target])
-        self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=xz_plane * 1e1)
+        self.komo.addObjective([1.0, self.phases], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[target])
+        self.komo.addObjective([1.0, self.phases], FS.positionRel, [gripper, self.obj], OT.eq, scale=xz_plane * 1e1)
         # gripper orientation
-        self.komo.addObjective([1.0, 2.0], FS.vectorZ, [gripper], OT.eq, [1e0], [0, 0, 1])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYX, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[0]])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[1]])
-        self.komo.addObjective([1.0, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[2]])
+        self.komo.addObjective([1.0, self.phases], FS.vectorZ, [gripper], OT.eq, [1e0], [0, 0, 1])
+        self.komo.addObjective([1.0, self.phases], FS.scalarProductYX, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[0]])
+        self.komo.addObjective([1.0, self.phases], FS.scalarProductYY, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[1]])
+        self.komo.addObjective([1.0, self.phases], FS.scalarProductYZ, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[2]])
         # allow movement in only one direction
-        self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis * 1e0, target=[0], order=1)
+        self.komo.addObjective([1.0, self.phases], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis * 1e0, target=[0], order=1)
 
     def push_x_pos(self):
         self._push_obj(0, 1)
@@ -139,8 +146,8 @@ class Manipulation:
         self.action = "pull"
         products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
 
-        self.komo.addFrameDof("obj_transXYPhi", table, JT.transXYPhi, False, self.obj)
-        self.komo.addRigidSwitch(1.0, ["obj_transXYPhi", self.obj])
+        self.komo.addFrameDof("gripper_obj_free", gripper, JT.free, True, self.obj)
+        self.komo.addRigidSwitch(1.0, ["gripper_obj_free", self.obj])
 
         x_axis = np.eye(3)[dim]
         yz_plane = np.delete(np.eye(3), dim, axis=0)
@@ -150,9 +157,12 @@ class Manipulation:
         self.komo.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
         self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e0, target=[target])
         self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * (-1e0), target=[-target])
-        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=[1e-1])
         self.komo.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
-        # gripper pose locked with box pose
+        # this improves stability. would not be necessary if we attached the obj to the table and not to the gripper i think
+        self.komo.addObjective([1.0, self.phases], FS.scalarProductZZ, [table, gripper], OT.eq, scale=[1e0], target=[1.0])
+        # make sure object is not lifted
+        rel_pos = self.scenario.getFrame(self.obj).getRelativePosition()
+        self.komo.addObjective([1.0, self.phases], FS.positionRel, [self.obj, table], OT.eq, scale=[0, 0, 1e1], target=[rel_pos])
 
     def pull_x_pos(self):
         self._pull_obj(0, 1)
@@ -174,7 +184,7 @@ class Manipulation:
 
     def target_pos_up_axis(self, dim: int, dir: int, align: FS, pos: np.typing.ArrayLike):
         """Places the object on top of the table at a certain position with the specified up axis"""
-        self.komo.addObjective([2.0], align, [self.obj], OT.eq, [1e1], target=[0, 0, dir])
+        self.komo.addObjective([self.phases], align, [self.obj], OT.eq, [1e1], target=[0, 0, dir])
         pos[2] = (self.get_bbox(self.obj)[dim] / 2.0) + (self.scenario.table.getSize()[2] / 2.0)
         self.target_pos(pos)
 
@@ -197,13 +207,13 @@ class Manipulation:
         self.target_pos_up_axis(2, -1, FS.vectorZ, pos)
 
     def target_pos(self, pos: np.typing.ArrayLike):
-        self.komo.addObjective([2.0], FS.positionRel, [self.obj, table], OT.eq, [1e1], target=pos)
+        self.komo.addObjective([self.phases], FS.positionRel, [self.obj, table], OT.eq, [1e1], target=pos)
 
     def target_quat(self, ori: np.typing.ArrayLike):
-        self.komo.addObjective([2.0], FS.quaternionRel, [self.obj, table], OT.eq, scale=[1e1], target=ori)
+        self.komo.addObjective([self.phases], FS.quaternionRel, [self.obj, table], OT.eq, scale=[1e1], target=ori)
 
     def target_pose(self, pose: np.typing.ArrayLike):
-        self.komo.addObjective([2.0], FS.poseRel, [self.obj, table], OT.eq, scale=[1e1], target=pose)
+        self.komo.addObjective([self.phases], FS.poseRel, [self.obj, table], OT.eq, scale=[1e1], target=pose)
 
     def solve(self):
         sol = NLP_Solver(self.komo.nlp(), DEBUG.value)
