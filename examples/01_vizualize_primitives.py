@@ -10,8 +10,6 @@ config.addFrame("box", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size).
 config.add_markers()
 
 for primitive_name in Manipulation.primitives:
-    if "push" in primitive_name:
-        continue
     man = Manipulation(config, "box", slices=10)
     getattr(man, primitive_name)()
     man.target_pos(config.getFrame("box").getRelativePosition())
