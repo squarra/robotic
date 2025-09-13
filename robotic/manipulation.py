@@ -24,6 +24,12 @@ class Manipulation:
         "grasp_y_neg",
         "grasp_z_pos",
         "grasp_z_neg",
+        "pull_x_pos",
+        "pull_x_neg",
+        "pull_y_pos",
+        "pull_y_neg",
+        "pull_z_pos",
+        "pull_z_neg",
     ]
 
     def __init__(self, scenario: PandaScenario, obj: str, slices=1):
@@ -96,8 +102,8 @@ class Manipulation:
         self.action = "grasp"
         products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
 
-        self.komo.addFrameDof("obj_trans", gripper, JT.free, True, self.obj)
-        self.komo.addRigidSwitch(1.0, ["obj_trans", self.obj])
+        self.komo.addFrameDof("obj_free", gripper, JT.free, True, self.obj)
+        self.komo.addRigidSwitch(1.0, ["obj_free", self.obj])
 
         x_axis = np.eye(3)[dim]
         yz_plane = np.delete(np.eye(3), dim, axis=0)
@@ -128,6 +134,43 @@ class Manipulation:
 
     def grasp_z_neg(self):
         self._grasp_obj(2, -1)
+
+    def _pull_obj(self, dim: int, dir: int):
+        self.action = "pull"
+        products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
+
+        self.komo.addFrameDof("obj_transXYPhi", table, JT.transXYPhi, False, self.obj)
+        self.komo.addRigidSwitch(1.0, ["obj_transXYPhi", self.obj])
+
+        x_axis = np.eye(3)[dim]
+        yz_plane = np.delete(np.eye(3), dim, axis=0)
+
+        # this is stolen from _grasp_obj()
+        target = 0.5 * self.get_bbox(self.obj) - 0.02
+        self.komo.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e0, target=[target])
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * (-1e0), target=[-target])
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=[1e-1])
+        self.komo.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
+        # gripper pose locked with box pose
+
+    def pull_x_pos(self):
+        self._pull_obj(0, 1)
+
+    def pull_x_neg(self):
+        self._pull_obj(0, -1)
+
+    def pull_y_pos(self):
+        self._pull_obj(1, 1)
+
+    def pull_y_neg(self):
+        self._pull_obj(1, -1)
+
+    def pull_z_pos(self):
+        self._pull_obj(2, 1)
+
+    def pull_z_neg(self):
+        self._pull_obj(2, -1)
 
     def target_pos_up_axis(self, dim: int, dir: int, align: FS, pos: np.typing.ArrayLike):
         """Places the object on top of the table at a certain position with the specified up axis"""
@@ -197,10 +240,10 @@ class Manipulation:
                 time.sleep(tau)
                 self.config.view()
 
-        if self.action == "grasp":
-            sim.moveGripper(gripper, 0.0)
-        else:
+        if self.action == "push":
             sim.moveGripper(gripper, 0.02)
+        else:
+            sim.moveGripper(gripper, 0.0)
         while not sim.gripperIsDone(gripper):
             sim.step([], tau, ControlMode.spline)
             if view:
