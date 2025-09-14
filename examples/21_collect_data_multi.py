@@ -15,8 +15,8 @@ import tqdm
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
-DATASET_PATH = "dataset.h5"
-NUM_SCENES = 2000
+DATASET_PATH = "test-dataset.h5"
+NUM_SCENES = 1
 START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
 POS_OFFSET = 0.05  # move 5cm along the push/grasp axis
@@ -28,18 +28,11 @@ def solve_primitive(args):
     obj, primitive_name = args
     man = Manipulation(config, obj, slices=SLICES)
     frame = man.config.getFrame(obj)
-    if "push" in primitive_name:
-        _, primitive_dim, primitive_dir = primitive_name.split("_")
-        axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
-        direction = {"pos": 1, "neg": -1}[primitive_dir]
-        offset_local = np.zeros(3)
-        offset_local[axis] = POS_OFFSET * direction
-    elif "grasp" in primitive_name:
-        _, primitive_dim = primitive_name.split("_")
-        axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
-        offset_local = np.zeros(3)
-        offset_local[axis] = POS_OFFSET
-
+    _, primitive_dim, primitive_dir = primitive_name.split("_")
+    dim = {"x": 0, "y": 1, "z": 2}[primitive_dim]
+    dir = {"pos": 1, "neg": -1}[primitive_dir]
+    offset_local = np.zeros(3)
+    offset_local[dim] = POS_OFFSET * dir
     offset_world = frame.getRotationMatrix() @ offset_local
     target_pos = frame.getRelativePosition() + offset_world
     target_pose = np.concatenate([target_pos, frame.getRelativeQuaternion()])
@@ -54,6 +47,7 @@ def solve_primitive(args):
 
 
 with h5py.File(DATASET_PATH, "w") as f:
+    f.attrs["primitives"] = np.array(Manipulation.primitives, dtype=h5py.string_dtype(encoding="utf-8"))
     for i in tqdm.trange(NUM_SCENES):
         seed = START_SEED + i
         config.delete_man_frames()
@@ -73,7 +67,7 @@ with h5py.File(DATASET_PATH, "w") as f:
         for obj in config.man_frames:
             obj_frame = config.getFrame(obj)
             obj_group = objects_group.create_group(obj)
-
+            obj_group.attrs["id"] = obj_frame.ID
             obj_group.create_dataset("pose", data=obj_frame.getRelativePose().astype(np.float32))
             obj_group.create_dataset("size", data=obj_frame.getSize()[:3].astype(np.float32))
 
