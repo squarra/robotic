@@ -15,9 +15,9 @@ import tqdm
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
-DATASET_PATH = "test-dataset.h5"
-NUM_SCENES = 1
-START_SEED = 0
+DATASET_PATH = "test-dataset-2.h5"
+NUM_SCENES = 1500
+START_SEED = 1000
 SLICES = 10  # fewer slices = faster but less accurate
 POS_OFFSET = 0.05  # move 5cm along the push/grasp axis
 

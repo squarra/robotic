@@ -16,21 +16,12 @@ class Manipulation:
         "push_x_pos",
         "push_y_pos",
         "push_z_pos",
-        "push_x_neg",
-        "push_y_neg",
-        "push_z_neg",
         "grasp_x_pos",
-        "grasp_x_neg",
         "grasp_y_pos",
-        "grasp_y_neg",
         "grasp_z_pos",
-        "grasp_z_neg",
         "pull_x_pos",
-        "pull_x_neg",
         "pull_y_pos",
-        "pull_y_neg",
-        "pull_z_pos",
-        "pull_z_neg",
+        "pull_z_pos"
     ]
 
     def __init__(self, scenario: PandaScenario, obj: str, phases=2.0, slices=1):
@@ -90,20 +81,11 @@ class Manipulation:
     def push_x_pos(self):
         self._push_obj(0, 1)
 
-    def push_x_neg(self):
-        self._push_obj(0, -1)
-
     def push_y_pos(self):
         self._push_obj(1, 1)
 
-    def push_y_neg(self):
-        self._push_obj(1, -1)
-
     def push_z_pos(self):
         self._push_obj(2, 1)
-
-    def push_z_neg(self):
-        self._push_obj(2, -1)
 
     def _grasp_obj(self, dim: int, dir: int):
         self.action = "grasp"
@@ -127,20 +109,11 @@ class Manipulation:
     def grasp_x_pos(self):
         self._grasp_obj(0, 1)
 
-    def grasp_x_neg(self):
-        self._grasp_obj(0, -1)
-
     def grasp_y_pos(self):
         self._grasp_obj(1, 1)
 
-    def grasp_y_neg(self):
-        self._grasp_obj(1, -1)
-
     def grasp_z_pos(self):
         self._grasp_obj(2, 1)
-
-    def grasp_z_neg(self):
-        self._grasp_obj(2, -1)
 
     def _pull_obj(self, dim: int, dir: int):
         self.action = "pull"
@@ -167,20 +140,11 @@ class Manipulation:
     def pull_x_pos(self):
         self._pull_obj(0, 1)
 
-    def pull_x_neg(self):
-        self._pull_obj(0, -1)
-
     def pull_y_pos(self):
         self._pull_obj(1, 1)
 
-    def pull_y_neg(self):
-        self._pull_obj(1, -1)
-
     def pull_z_pos(self):
         self._pull_obj(2, 1)
-
-    def pull_z_neg(self):
-        self._pull_obj(2, -1)
 
     def target_pos_up_axis(self, dim: int, dir: int, align: FS, pos: np.typing.ArrayLike):
         """Places the object on top of the table at a certain position with the specified up axis"""

@@ -49,23 +49,16 @@ with h5py.File(DATASET_PATH, "w") as f:
         for prim_idx, primitive_name in enumerate(Manipulation.primitives):
             prim_start = time.perf_counter()
 
-            man = Manipulation(config, obj, slices=SLICES)
-
-            if "push" in primitive_name:
-                _, primitive_dim, primitive_dir = primitive_name.split("_")
-                axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
-                direction = {"pos": 1, "neg": -1}[primitive_dir]
-                offset_local = np.zeros(3)
-                offset_local[axis] = POS_OFFSET * direction
-            elif "grasp" in primitive_name:
-                _, primitive_dim = primitive_name.split("_")
-                axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
-                offset_local = np.zeros(3)
-                offset_local[axis] = POS_OFFSET
-
+            _, primitive_dim, primitive_dir = primitive_name.split("_")
+            axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
+            direction = {"pos": 1, "neg": -1}[primitive_dir]
+            offset_local = np.zeros(3)
+            offset_local[axis] = POS_OFFSET * direction
             offset_world = obj_frame.getRotationMatrix() @ offset_local
             target_pos = obj_frame.getRelativePosition() + offset_world
             target_pose = np.concatenate([target_pos, obj_frame.getRelativeQuaternion()])
+
+            man = Manipulation(config, obj, slices=SLICES)
             man.target_pose(target_pose)
 
             getattr(man, primitive_name)()
