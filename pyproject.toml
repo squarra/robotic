@@ -18,7 +18,6 @@ examples = [
     "h5py>=3.14.0",
     "ipykernel>=6.30.1",
     "matplotlib>=3.10.5",
-    "pygobject>=3.52.3",
     "scikit-learn>=1.7.1",
     "seaborn>=0.13.2",
     "torch>=2.8.0",
