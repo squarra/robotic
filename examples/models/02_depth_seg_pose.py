@@ -11,7 +11,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 
-dataset = DepthSegPoseDataset()
+dataset = DepthSegPoseDataset(DATASET_PATH)
 dataloader = DataLoader(dataset, batch_size=32, shuffle=True, num_workers=4, pin_memory=True)
 
 model = DepthPoseFeasibilityNet(image_shape=dataset.image_shape, pose_dim=7, num_primitives=len(dataset.primitives)).to(device)

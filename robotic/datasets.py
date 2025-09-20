@@ -7,8 +7,8 @@ from tqdm import tqdm
 
 class PoseSizeDataset(Dataset):
     """
-    - in memory dataset for the nested h5 structure
-    - pose and size concatenated into one tensor of shape (10)
+    - x: concatenation of pose (7) and size (3) → tensor of shape (10,)
+    - y: feasibility of each primitive → tensor of shape (num_primitives,)
     """
 
     def __init__(self, h5_path: str):
@@ -16,15 +16,17 @@ class PoseSizeDataset(Dataset):
         with h5py.File(h5_path, "r") as f:
             self.primitives = list(f.attrs["primitives"])
             for dp_key in tqdm(f.keys(), desc="Caching data"):
-                objects_group = f[dp_key]["objects"]
-                for obj_key in objects_group.keys():
-                    obj_group = objects_group[obj_key]
-                    pose = obj_group["pose"][()].astype(np.float32)
-                    size = obj_group["size"][()].astype(np.float32)
-                    x = np.concatenate([pose, size])
+                dp_group = f[dp_key]
 
-                    feasibles = [int(obj_group["primitives"][prim]["feasible"][()]) for prim in self.primitives]
-                    y = np.array(feasibles, dtype=np.float32)
+                poses = dp_group["poses"][()]  # (num_objects, 7)
+                sizes = dp_group["sizes"][()]  # (num_objects, 3)
+                feasibles = dp_group["feasibles"][()]  # (num_objects, num_primitives)
+
+                num_objects = poses.shape[0]
+
+                for oi in range(num_objects):
+                    x = np.concatenate([poses[oi], sizes[oi]]).astype(np.float32)
+                    y = feasibles[oi].astype(np.float32)
                     self.data.append((torch.from_numpy(x), torch.from_numpy(y)))
 
     def __len__(self):
