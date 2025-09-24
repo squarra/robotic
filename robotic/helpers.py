@@ -161,3 +161,17 @@ def matrix_to_quat(rotation_matrix: np.typing.ArrayLike):
 
 def quat_to_matrix(quaternion: np.typing.ArrayLike):
     return R.from_quat(np.roll(quaternion, -1)).as_matrix()
+
+
+def pose_score(target_pose, final_pose, feasible, alpha=10.0, beta=5.0):
+    """Exponential similarity score between poses."""
+    if not feasible:
+        return 0.0
+
+    p1, q1 = target_pose[:3], target_pose[3:]
+    p2, q2 = final_pose[:3], final_pose[3:]
+
+    d_p = np.linalg.norm(p1 - p2)
+    d_q = 1 - abs(np.dot(q1, q2))
+
+    return float(np.exp(-alpha * d_p) * np.exp(-beta * d_q))

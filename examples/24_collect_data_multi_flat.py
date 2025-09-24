@@ -7,7 +7,7 @@ import tqdm
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
-DATASET_PATH = "dataset-flat.h5"
+DATASET_PATH = "dataset.h5"
 NUM_SCENES = 1500
 START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
@@ -52,10 +52,10 @@ with h5py.File(DATASET_PATH, "w") as f:
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
         dp_group = f.create_group(f"datapoint_{seed:04d}")
-        dp_group.create_dataset("camera_positions", data=config.camera_positions)
-        dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
-        dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
-        dp_group.create_dataset("seg_ids", data=seg_ids, compression="gzip", chunks=True)
+        dp_group.create_dataset("camera_positions", data=config.camera_positions.astype(np.float32))
+        dp_group.create_dataset("images", data=images.astype(np.float32), compression="gzip", chunks=True)
+        dp_group.create_dataset("depths", data=depths.astype(np.float32), compression="gzip", chunks=True)
+        dp_group.create_dataset("seg_ids", data=seg_ids.astype(np.float32), compression="gzip", chunks=True)
 
         num_objects = len(config.man_frames)
         num_primitives = len(primitives)
@@ -84,8 +84,8 @@ with h5py.File(DATASET_PATH, "w") as f:
             feasibles[oi, pi] = feasible
             final_poses[oi, pi] = final_pose
 
-        dp_group.create_dataset("poses", data=poses)
-        dp_group.create_dataset("sizes", data=sizes)
-        dp_group.create_dataset("target_poses", data=target_poses)
-        dp_group.create_dataset("feasibles", data=feasibles)
-        dp_group.create_dataset("final_poses", data=final_poses)
+        dp_group.create_dataset("poses", data=poses.astype(np.float32))
+        dp_group.create_dataset("sizes", data=sizes.astype(np.float32))
+        dp_group.create_dataset("target_poses", data=target_poses.astype(np.float32))
+        dp_group.create_dataset("feasibles", data=feasibles.astype(np.float32))
+        dp_group.create_dataset("final_poses", data=final_poses.astype(np.float32))

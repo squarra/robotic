@@ -2,7 +2,7 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from robotic.datasets import PoseSizeDataset
+from robotic.datasets import InMemoryDataset
 from robotic.models import PoseSizeMlp
 
 DATASET_PATH = "dataset.h5"
@@ -14,7 +14,7 @@ device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
 # Dataset & Dataloader
-dataset = PoseSizeDataset(DATASET_PATH)
+dataset = InMemoryDataset(DATASET_PATH, ["poses", "sizes", "feasibles"])
 train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
@@ -31,7 +31,8 @@ def evaluate(model, loader, criterion, device):
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     with torch.no_grad():
-        for x, y in loader:
+        for pose, size, y in loader:
+            x = torch.cat((pose, size), dim=1)
             x, y = x.to(device), y.to(device)
             logits = model(x)
             loss = criterion(logits, y)
@@ -48,7 +49,8 @@ def evaluate(model, loader, criterion, device):
 for epoch in range(NUM_EPOCHS):
     model.train()
     total_loss = 0.0
-    for x, y in train_loader:
+    for pose, size, y in train_loader:
+        x = torch.cat((pose, size), dim=1)
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
         logits = model(x)

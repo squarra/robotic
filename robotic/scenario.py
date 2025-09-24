@@ -21,7 +21,7 @@ class Scenario(Config):
         self.camera_view = CameraView(self)
         self.camera_view.setCamera(self.camera)
 
-        self.camera_positions = camera_positions
+        self.camera_positions = np.array(camera_positions, dtype=np.float32)
         self.env_frames = set(self.getFrameNames())
 
     def add_markers(self):
@@ -114,7 +114,7 @@ class PandaScenario(Scenario):
     def add_topdown_camera(self, height=1.5):
         table_pos = self.table.getPosition()
         cam_pos = np.array([table_pos[0], table_pos[1], table_pos[2] + height])
-        self.camera_positions = np.vstack([self.camera_positions, cam_pos])
+        self.camera_positions = np.vstack([self.camera_positions, cam_pos], dtype=np.float32)
 
     def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
