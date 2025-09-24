@@ -15,16 +15,16 @@ print("Using device:", device)
 
 # Dataset & Dataloader
 dataset = InMemoryDataset(DATASET_PATH, ["poses", "sizes", "feasibles"])
+print(len(dataset))
 train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
 
 train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 # Model setup
-model = PoseSizeMlp(input_dim=10, num_primitives=len(dataset.primitives)).to(device)
+model = PoseSizeMlp(len(dataset.primitives)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 criterion = nn.BCEWithLogitsLoss()
-history = {"train_loss": [], "val_loss": [], "val_acc": []}
 
 
 def evaluate(model, loader, criterion, device):
@@ -60,12 +60,9 @@ for epoch in range(NUM_EPOCHS):
         total_loss += loss.item() * x.size(0)
 
     train_loss = total_loss / len(train_loader.dataset)
-    history["train_loss"].append(train_loss)
 
     if (epoch + 1) % EVAL_EVERY == 0:
         val_loss, val_acc = evaluate(model, test_loader, criterion, device)
-        history["val_loss"].append(val_loss)
-        history["val_acc"].append(val_acc)
         print(f"epoch {epoch + 1:03d}, train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, val_acc={val_acc:.4f}")
 
 

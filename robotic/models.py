@@ -3,13 +3,19 @@ import torch.nn as nn
 
 
 class PoseSizeMlp(nn.Module):
-    def __init__(self, input_dim=10, hidden_dim=128, num_primitives=8):
+    def __init__(self, num_primitives, hidden_dim=128, num_layers=2, dropout=0.0):
         super().__init__()
-        self.net = nn.Sequential(
-            nn.Linear(input_dim, hidden_dim),
-            nn.ReLU(),
-            nn.Linear(hidden_dim, num_primitives),
-        )
+        layers = []
+        input_dim = 10
+
+        for i in range(num_layers):
+            layers.append(nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim))
+            layers.append(nn.ReLU())
+            if dropout > 0:
+                layers.append(nn.Dropout(dropout))
+        layers.append(nn.Linear(hidden_dim, num_primitives))
+
+        self.net = nn.Sequential(*layers)
 
     def forward(self, x):
         return self.net(x)
