@@ -1,4 +1,5 @@
 import h5py
+import torch
 from torch.utils.data import Dataset
 
 SCENE_FIELDS = ["camera_positions", "images", "depths", "seg_ids"]
@@ -20,13 +21,14 @@ class InMemoryDataset(Dataset):
                     entry = []
                     for field in fields:
                         if field in SCENE_FIELDS:
-                            entry.append(dp_group[field][()])
+                            arr = dp_group[field][()]
                         elif field in OBJECT_FIELDS:
-                            entry.append(dp_group[field][oi])
+                            arr = dp_group[field][oi]
                         elif field == "masks":
-                            entry.append(dp_group["seg_ids"][()] == oi)
+                            arr = dp_group["seg_ids"][()] == oi
                         else:
                             raise ValueError
+                        entry.append(torch.from_numpy(arr))
                     self.data.append(entry)
 
     def __len__(self):
@@ -72,11 +74,12 @@ class LazyDataset(Dataset):
         data = []
         for field in self.fields:
             if field in SCENE_FIELDS:
-                data.append(dp_group[field][()])
+                arr = dp_group[field][()]
             elif field in OBJECT_FIELDS:
-                data.append(dp_group[field][oi])
+                arr = dp_group[field][oi]
             elif field == "masks":
-                data.append(dp_group["seg_ids"][()] == oi)
+                arr = dp_group["seg_ids"][()] == oi
             else:
                 raise ValueError
+            data.append(torch.from_numpy(arr))
         return data
