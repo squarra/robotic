@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 from tqdm import tqdm
 
 from robotic.datasets import LazyDataset
-from robotic.models import DepthsMasksPoseNetSmall
+from robotic.models import VisionPoseNet
 
 DATASET_PATH = "dataset.h5"
 NUM_EPOCHS = 100
@@ -23,7 +23,7 @@ train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, nu
 test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 # Model
-model = DepthsMasksPoseNetSmall(num_primitives=len(dataset.primitives)).to(device)
+model = VisionPoseNet(num_primitives=len(dataset.primitives)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.BCEWithLogitsLoss()
 history = {"train_loss": [], "val_loss": [], "val_acc": []}
