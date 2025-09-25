@@ -101,13 +101,12 @@ print("Using device:", device)
 
 # Dataset
 dataset = VisionPoseDataset(DATASET_PATH)
-datalodader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, pin_memory=True)
+dataloader = DataLoader(dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 
 # Model
 model = VisionPoseNet(len(dataset.primitives)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.BCEWithLogitsLoss()
-
 
 with torch.profiler.profile(
     schedule=torch.profiler.schedule(wait=1, warmup=1, active=PROFILER_STEPS, repeat=1),
@@ -116,7 +115,7 @@ with torch.profiler.profile(
     profile_memory=True,
     with_stack=True,
 ) as prof:
-    for i, (depths, masks, pose, cam_positions, y) in enumerate(datalodader):
+    for i, (depths, masks, pose, cam_positions, y) in enumerate(dataloader):
         if i >= (1 + 1 + PROFILER_STEPS):  # wait + warmup + active
             break
         depths, masks, pose, cam_positions, y = (depths.to(device), masks.to(device), pose.to(device), cam_positions.to(device), y.to(device))
@@ -126,3 +125,5 @@ with torch.profiler.profile(
         loss.backward()
         optimizer.step()
         prof.step()
+
+print(prof.key_averages().table())
