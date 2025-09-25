@@ -3,20 +3,17 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from robotic.datasets import LazyDataset
-from robotic.models import VisionPoseNet
+from models.vision_pose import DATASET, MODEL_PATH, TEST_DATASET, TRAIN_DATASET, VisionPoseNet
 
-DATASET_PATH = "dataset.h5"
-EPOCHS = 30
-BATCH_SIZE = 32
+NUM_TRIALS = 1
+NUM_EPOCHS = 1
+BATCH_SIZE = 16
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+print("Using device:", device)
 
-dataset = LazyDataset(DATASET_PATH, ["depths", "masks", "poses", "camera_positions", "feasibles"])
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
-
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
+train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 
 def evaluate(model, loader, device):
@@ -25,10 +22,14 @@ def evaluate(model, loader, device):
     tp, fp, fn = 0, 0, 0
 
     with torch.no_grad():
-        for depths, masks, poses, cam_pos, y in loader:
-            depths, masks, poses, cam_pos, y = (depths.to(device), masks.to(device), poses.to(device), cam_pos.to(device), y.to(device))
+        for depths, masks, pose, cam_positions, y in loader:
+            depths = depths.to(device, non_blocking=True)
+            masks = masks.to(device, non_blocking=True)
+            pose = pose.to(device, non_blocking=True)
+            cam_positions = cam_positions.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
 
-            logits = model(depths, masks, poses, cam_pos)
+            logits = model(depths, masks, pose, cam_positions)
             preds = (torch.sigmoid(logits) > 0.5).long()
             y_long = y.long()
 
@@ -60,7 +61,7 @@ def objective(trial):
     lr = trial.suggest_float("lr", 1e-4, 1e-2, log=True)
 
     model = VisionPoseNet(
-        num_primitives=len(dataset.primitives),
+        num_primitives=len(DATASET.primitives),
         vision_dim=vision_dim,
         state_dim=state_dim,
         fusion_dim=fusion_dim,
@@ -71,19 +72,17 @@ def objective(trial):
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=1e-5)
     criterion = nn.BCEWithLogitsLoss()
 
-    for _ in range(EPOCHS):
+    for _ in range(NUM_EPOCHS):
         model.train()
-        for depths, masks, poses, cam_pos, y in train_loader:
-            depths, masks, poses, cam_pos, y = (
-                depths.to(device),
-                masks.to(device),
-                poses.to(device),
-                cam_pos.to(device),
-                y.to(device),
-            )
+        for depths, masks, pose, cam_positions, y in train_loader:
+            depths = depths.to(device, non_blocking=True)
+            masks = masks.to(device, non_blocking=True)
+            pose = pose.to(device, non_blocking=True)
+            cam_positions = cam_positions.to(device, non_blocking=True)
+            y = y.to(device, non_blocking=True)
 
             optimizer.zero_grad()
-            logits = model(depths, masks, poses, cam_pos)
+            logits = model(depths, masks, pose, cam_positions)
             loss = criterion(logits, y)
             loss.backward()
             optimizer.step()
@@ -101,20 +100,19 @@ def objective(trial):
                 "recall": recall,
                 "f1": f1,
             },
-            "vision_pose_best.pt",
+            MODEL_PATH,
         )
 
     return acc
 
 
 study = optuna.create_study(study_name="vision_pose", direction="maximize")
-study.optimize(objective, n_trials=20)
+study.optimize(objective, n_trials=NUM_TRIALS)
 
-print("Best trial:")
 trial = study.best_trial
-checkpoint = torch.load("best_simple_model.pt", map_location=device)
-print(f"  Val Per-label Acc: {checkpoint['val_acc']:.4f}")
-print(f"  Precision: {checkpoint['precision']:.4f}")
-print(f"  Recall: {checkpoint['recall']:.4f}")
-print(f"  F1: {checkpoint['f1']:.4f}")
-print("  Params:", checkpoint["params"])
+checkpoint = torch.load(MODEL_PATH, map_location=device)
+print(f"Best trial: {checkpoint['params']}")
+print(f"  val_acc:   {checkpoint['val_acc']:.4f}")
+print(f"  precision: {checkpoint['precision']:.4f}")
+print(f"  recall:    {checkpoint['recall']:.4f}")
+print(f"  f1:        {checkpoint['f1']:.4f}")

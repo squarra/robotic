@@ -2,11 +2,12 @@ import h5py
 import numpy as np
 from tqdm import tqdm
 
+from models.vision_pose import DATASET_PATH
+
 SOURCE_H5_PATH = "dataset.h5"
-DEST_H5_PATH = "vision_pose_dataset.h5"
 
 
-with h5py.File(SOURCE_H5_PATH, "r") as f_in, h5py.File(DEST_H5_PATH, "w") as f_out:
+with h5py.File(SOURCE_H5_PATH, "r") as f_in, h5py.File(DATASET_PATH, "w") as f_out:
     f_out.attrs.update(f_in.attrs)
 
     for dp_key in tqdm(f_in.keys(), desc="Processing scenes"):
