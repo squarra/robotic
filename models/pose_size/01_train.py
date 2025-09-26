@@ -2,27 +2,19 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader
 
-from robotic.datasets import InMemoryDataset
-from robotic.models import PoseSizeMlp
+from models.pose_size import DATASET, TEST_DATASET, TRAIN_DATASET, PoseSizeMlp
 
-DATASET_PATH = "dataset.h5"
 NUM_EPOCHS = 100
 BATCH_SIZE = 64
-EVAL_EVERY = 5
+EVAL_EVERY = 8
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
-# Dataset & Dataloader
-dataset = InMemoryDataset(DATASET_PATH, ["poses", "sizes", "feasibles"])
-print(len(dataset))
-train_dataset, test_dataset = torch.utils.data.random_split(dataset, [0.8, 0.2])
+train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
+test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
-train_loader = DataLoader(train_dataset, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-test_loader = DataLoader(test_dataset, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
-
-# Model setup
-model = PoseSizeMlp(len(dataset.primitives)).to(device)
+model = PoseSizeMlp(len(DATASET.primitives)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 criterion = nn.BCEWithLogitsLoss()
 
@@ -31,8 +23,7 @@ def evaluate(model, loader, criterion, device):
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     with torch.no_grad():
-        for pose, size, y in loader:
-            x = torch.cat((pose, size), dim=1)
+        for x, y in loader:
             x, y = x.to(device), y.to(device)
             logits = model(x)
             loss = criterion(logits, y)
@@ -45,12 +36,10 @@ def evaluate(model, loader, criterion, device):
     return total_loss / len(loader.dataset), correct / total
 
 
-# Training
 for epoch in range(NUM_EPOCHS):
     model.train()
     total_loss = 0.0
-    for pose, size, y in train_loader:
-        x = torch.cat((pose, size), dim=1)
+    for x, y in train_loader:
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
         logits = model(x)
@@ -66,5 +55,4 @@ for epoch in range(NUM_EPOCHS):
         print(f"epoch {epoch + 1:03d}, train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, val_acc={val_acc:.4f}")
 
 
-# Save model
 torch.save(model.state_dict(), "PoseSizeMlp.pt")
