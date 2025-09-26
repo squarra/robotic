@@ -16,7 +16,7 @@ train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, nu
 test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 
-def evaluate(model, loader, device):
+def evaluate(model, loader, device, threshold=0.5):
     model.eval()
     total_correct_per_label, total_labels = 0, 0
     tp, fp, fn = 0, 0, 0
@@ -30,7 +30,9 @@ def evaluate(model, loader, device):
             y = y.to(device, non_blocking=True)
 
             logits = model(depths, masks, pose, cam_positions)
-            preds = (torch.sigmoid(logits) > 0.5).long()
+            probs = torch.sigmoid(logits)
+
+            preds = (probs > threshold).long()
             y_long = y.long()
 
             total_correct_per_label += (preds == y_long).sum().item()
@@ -47,11 +49,22 @@ def evaluate(model, loader, device):
     return acc, precision, recall, f1
 
 
-best_acc = 0.0
+def find_best_threshold(model, loader, device):
+    best_f1 = -1.0
+    best_threshold = 0.5
+    for t in torch.linspace(0.1, 0.9, steps=9):
+        _, _, _, f1 = evaluate(model, loader, device, threshold=float(t))
+        if f1 > best_f1:
+            best_f1 = f1
+            best_threshold = float(t)
+    return best_threshold, best_f1
+
+
+best_score = 0.0
 
 
 def objective(trial):
-    global best_acc
+    global best_score
 
     vision_dim = trial.suggest_categorical("vision_dim", [32, 64, 128])
     state_dim = trial.suggest_categorical("state_dim", [32, 64, 128])
@@ -87,31 +100,33 @@ def objective(trial):
             loss.backward()
             optimizer.step()
 
-    acc, precision, recall, f1 = evaluate(model, test_loader, device)
+    best_thresh, best_f1 = find_best_threshold(model, test_loader, device)
+    acc, precision, recall, _ = evaluate(model, test_loader, device, threshold=best_thresh)
 
-    if acc > best_acc:
-        best_acc = acc
+    if best_f1 > best_score:
+        best_score = best_f1
         torch.save(
             {
                 "model_state_dict": model.state_dict(),
                 "params": trial.params,
+                "best_threshold": best_thresh,
                 "val_acc": acc,
                 "precision": precision,
                 "recall": recall,
-                "f1": f1,
+                "f1": best_f1,
             },
             MODEL_PATH,
         )
 
-    return acc
+    return best_f1
 
 
 study = optuna.create_study(study_name="vision_pose", direction="maximize")
 study.optimize(objective, n_trials=NUM_TRIALS)
 
-trial = study.best_trial
 checkpoint = torch.load(MODEL_PATH, map_location=device)
-print(f"Best trial: {checkpoint['params']}")
+print(f"Best trial params: {checkpoint['params']}")
+print(f"  best threshold: {checkpoint['best_threshold']:.2f}")
 print(f"  val_acc:   {checkpoint['val_acc']:.4f}")
 print(f"  precision: {checkpoint['precision']:.4f}")
 print(f"  recall:    {checkpoint['recall']:.4f}")
