@@ -14,6 +14,7 @@ SLICES = 10  # fewer slices = faster but less accurate
 POS_OFFSET = 0.05  # move 5cm along the push/grasp axis
 
 primitives = Manipulation.primitives
+num_primitives = len(primitives)
 config = PandaScenario()
 
 
@@ -47,18 +48,17 @@ with h5py.File(DATASET_PATH, "w") as f:
     for i in tqdm.trange(NUM_SCENES, desc="Collecting data"):
         seed = START_SEED + i
         config.delete_man_frames()
-        config.add_boxes_to_scene(seed=seed)
+        config.add_boxes(seed=seed)
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
         dp_group = f.create_group(f"datapoint_{seed:04d}")
-        dp_group.create_dataset("camera_positions", data=config.camera_positions.astype(np.float32))
-        dp_group.create_dataset("images", data=images.astype(np.float32), compression="gzip", chunks=True)
-        dp_group.create_dataset("depths", data=depths.astype(np.float32), compression="gzip", chunks=True)
-        dp_group.create_dataset("seg_ids", data=seg_ids.astype(np.float32), compression="gzip", chunks=True)
+        dp_group.create_dataset("cam_poses", data=config.cam_poses)
+        dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
+        dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
+        dp_group.create_dataset("seg_ids", data=seg_ids, compression="gzip", chunks=True)
 
         num_objects = len(config.man_frames)
-        num_primitives = len(primitives)
 
         poses = np.zeros((num_objects, 7), dtype=np.float32)
         sizes = np.zeros((num_objects, 3), dtype=np.float32)

@@ -1,20 +1,35 @@
 import numpy as np
 
 from robotic._robotic import JT, ST, CameraView, Config, raiPath
-from robotic.helpers import DEBUG, compute_look_at_matrix, generate_circular_camera_positions, matrix_to_quat, random_z_rotation_matrix, rgb_to_gray
+from robotic.helpers import DEBUG, compute_look_at_quat, generate_circular_camera_positions, matrix_to_quat, random_z_rotation_matrix
 
 
 class Scenario(Config):
-    def __init__(self, camera_positions):
+    def __init__(self):
         super().__init__()
         self.world = self.addFrame("world")
 
-        self.camera = self.addFrame("camera", "world").setAttributes({"focalLength": 0.895, "width": 640.0, "height": 360.0, "zRange": [0.01, 5.0]})
-        self.camera_view = CameraView(self)
-        self.camera_view.setCamera(self.camera)
+        self.cam = self.addFrame("camera", "world").setAttributes({"focalLength": 0.895, "width": 640.0, "height": 360.0, "zRange": [0.01, 5.0]})
+        self.cam_view = CameraView(self)
+        self.cam_view.setCamera(self.cam)
+        self._cam_poses = []
 
-        self.camera_positions = np.array(camera_positions, dtype=np.float32)
         self.env_frames = set(self.getFrameNames())
+
+    @property
+    def cam_poses(self):
+        return np.asarray(self._cam_poses, dtype=np.float32)
+
+    def add_cam_pose(self, pose: np.typing.ArrayLike):
+        self._cam_poses.append(pose)
+
+    def add_circular_cam_poses(self, radius=1.0, num_views=3, heights=[1.0]):
+        for pos in generate_circular_camera_positions(radius, num_views, heights):
+            quat = compute_look_at_quat(pos, [0, 0, 0])
+            self.add_cam_pose([*pos, *quat])
+
+    def add_topdown_cam(self, height=1.5):
+        self.add_cam_pose([0, 0, height, 0, 0, 1, 0])
 
     def add_markers(self):
         for i, obj in enumerate(self.man_frames):
@@ -25,51 +40,51 @@ class Scenario(Config):
             if "marker" in frame:
                 self.delFrame(frame)
 
-    def set_camera(self, position: np.typing.ArrayLike):
-        self.camera.setRelativePosition(position).setRotationMatrix(compute_look_at_matrix(self.camera.getPosition(), self.world.getPosition()))
+    def set_cam_pose(self, pose: np.typing.ArrayLike):
+        self.cam.setRelativePose(pose)
 
     def compute_rgbd(self) -> tuple[np.ndarray, np.ndarray]:
-        return self.camera_view.computeImageAndDepth(self)
+        image, depth = self.cam_view.computeImageAndDepth(self)
+        return image.astype(np.float32), depth.astype(np.float32)
 
-    def compute_image(self, grayscale=False):
-        rgb = self.compute_rgbd()[0]
-        return rgb_to_gray(rgb) if grayscale else rgb
+    def compute_image(self):
+        return self.compute_rgbd()[0]
 
     def compute_depth(self):
         return self.compute_rgbd()[1]
 
     def compute_seg_rgb(self) -> np.ndarray:
         """RGB-encoded frame IDs; IDs >= len(self.getFrames()) are background."""
-        return self.camera_view.computeSegmentationImage(self)
+        return self.cam_view.computeSegmentationImage(self)
 
     def compute_seg_ids(self) -> np.ndarray:
         """Frame IDs per pixel; IDs >= len(self.getFrames()) are background."""
-        return self.camera_view.computeSegmentationID(self)
+        return self.cam_view.computeSegmentationID(self)
 
     def delete_man_frames(self):
         for man_frame in self.man_frames:
             self.delFrame(man_frame)
 
-    def compute_images_and_seg_ids(self, grayscale=False):
+    def compute_images_and_seg_ids(self):
         images, seg_ids = [], []
-        for pos in self.camera_positions:
-            self.set_camera(pos)
-            images.append(self.compute_image(grayscale))
+        for pose in self.cam_poses:
+            self.set_cam_pose(pose)
+            images.append(self.compute_image())
             seg_ids.append(self.compute_seg_ids())
         return np.stack(images), np.stack(seg_ids)
 
     def compute_depths_and_seg_ids(self):
         depths, seg_ids = [], []
-        for pos in self.camera_positions:
-            self.set_camera(pos)
+        for pose in self.cam_poses:
+            self.set_cam_pose(pose)
             depths.append(self.compute_depth())
             seg_ids.append(self.compute_seg_ids())
         return np.stack(depths), np.stack(seg_ids)
 
     def compute_images_depths_and_seg_ids(self):
         images, depths, seg_ids = [], [], []
-        for pos in self.camera_positions:
-            self.set_camera(pos)
+        for pose in self.cam_poses:
+            self.set_cam_pose(pose)
             image, depth = self.compute_rgbd()
             images.append(image)
             depths.append(depth)
@@ -84,14 +99,13 @@ class Scenario(Config):
         return set(self.getFrameNames()) - self.env_frames
 
     def __repr__(self):
-        return (
-            f"{self.__class__.__name__}(env_frames={len(self.env_frames)}, man_frames={len(self.man_frames)}, positions={len(self.camera_positions)})"
-        )
+        return f"{self.__class__.__name__}(env_frames={len(self.env_frames)}, man_frames={len(self.man_frames)}, poses={len(self.cam_poses)})"
 
 
 class PandaScenario(Scenario):
-    def __init__(self):
-        super().__init__(generate_circular_camera_positions(1.0, 3, [2.0]))
+    def __init__(self, add_circular_cam_poses=True):
+        super().__init__()
+
         self.table = (
             self.addFrame("table", "world")
             .setShape(ST.ssBox, [1.2, 1.2, 0.1, 0.02])
@@ -103,10 +117,8 @@ class PandaScenario(Scenario):
 
         self.env_frames = set(self.getFrameNames())
 
-    def add_topdown_camera(self, height=1.5):
-        table_pos = self.table.getPosition()
-        cam_pos = np.array([table_pos[0], table_pos[1], table_pos[2] + height])
-        self.camera_positions = np.vstack([self.camera_positions, cam_pos], dtype=np.float32)
+        if add_circular_cam_poses:
+            self.add_circular_cam_poses()
 
     def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)

@@ -110,16 +110,20 @@ def komo_to_trimesh(komo: KOMO, phase: int):
             print("overflow wtf")
 
 
-def compute_look_at_matrix(origin_pos: np.typing.ArrayLike, target_pos: np.typing.ArrayLike):
+def compute_look_at_matrix(pos: np.typing.ArrayLike, target_pos: np.typing.ArrayLike):
     """Return a rotation matrix that orients from camera_pos to face target_pos."""
-    if abs(origin_pos[0]) < np.finfo(np.float32).eps:  # weird robotic behaviour: avoid x being too close to zero
-        origin_pos[0] = np.finfo(np.float32).eps
-    forward = target_pos - origin_pos
+    pos, target_pos = np.asarray(pos), np.asarray(target_pos)
+    if abs(pos[0]) < np.finfo(np.float32).eps:  # weird robotic behaviour: avoid x being too close to zero
+        pos[0] = np.finfo(np.float32).eps
+    forward = target_pos - pos
     forward /= np.linalg.norm(forward)
     right = np.cross([0, 0, -1], forward)
     right /= np.linalg.norm(right)
     up = np.cross(forward, right)
     return np.column_stack((right, up, forward))
+
+def compute_look_at_quat(pos: np.typing.ArrayLike, target_pos: np.typing.ArrayLike):
+    return matrix_to_quat(compute_look_at_matrix(pos, target_pos))
 
 
 def rgb_to_gray(image: np.ndarray):
@@ -135,7 +139,7 @@ def generate_circular_camera_positions(radius: float, num_views: int, heights: l
             x = radius * np.cos(angle)
             y = radius * np.sin(angle)
             positions.append([x, y, h])
-    return np.stack(positions)
+    return positions
 
 
 def random_z_rotation_matrix(rng):
