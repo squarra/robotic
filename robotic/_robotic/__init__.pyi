@@ -943,8 +943,8 @@ class KOMO:
         * kOrder: the 'Markov-order', i.e., maximal tuple of configurations over which we formulate features (e.g. take finite differences)
         * enableCollisions: if True, KOMO runs a broadphase collision check (using libFCL) in each optimization step -- only then accumulative collision/penetration features will correctly evaluate to non-zero. But this is costly.
         """
-    def addControlObjective(self, times: arr, order: int, scale: float = ..., target: arr = ..., deltaFromSlice: int = ..., deltaToSlice: int = ...) -> Objective:
-        """addControlObjective(self: _robotic.KOMO, times: arr, order: int, scale: float = 1.0, target: arr = array(0.0078125), deltaFromSlice: int = 0, deltaToSlice: int = 0) -> Objective
+    def addControlObjective(self, times: arr, order: int, scale: float = ..., target: arr = ..., deltaFromSlice: int = ..., deltaToSlice: int = ...) -> KOMO_Objective:
+        """addControlObjective(self: _robotic.KOMO, times: arr, order: int, scale: float = 1.0, target: arr = array(0.0078125), deltaFromSlice: int = 0, deltaToSlice: int = 0) -> _robotic.KOMO_Objective
 
 
         * times: (as for `addObjective`) the phase-interval in which this objective holds; [] means all times
@@ -958,8 +958,8 @@ class KOMO:
         """
     def addModeSwitch(self, times: arr, newMode: SY, frames: StringA, firstSwitch: bool = ...) -> None:
         """addModeSwitch(self: _robotic.KOMO, times: arr, newMode: _robotic.SY, frames: StringA, firstSwitch: bool = True) -> None"""
-    def addObjective(self, times: arr, feature: FS, frames: StringA, type: ObjectiveType, scale: arr = ..., target: arr = ..., order: int = ...) -> None:
-        """addObjective(self: _robotic.KOMO, times: arr, feature: _robotic.FS, frames: StringA, type: ObjectiveType, scale: arr = array(0.0078125), target: arr = array(0.0078125), order: int = -1) -> None
+    def addObjective(self, times: arr, feature: FS, frames: StringA, type: ObjectiveType, scale: arr = ..., target: arr = ..., order: int = ...) -> KOMO_Objective:
+        """addObjective(self: _robotic.KOMO, times: arr, feature: _robotic.FS, frames: StringA, type: ObjectiveType, scale: arr = array(0.0078125), target: arr = array(0.0078125), order: int = -1) -> _robotic.KOMO_Objective
 
         central method to define objectives in the KOMO NLP:
         * times: the time intervals (subset of configurations in a path) over which this feature is active (irrelevant for IK)
@@ -1046,6 +1046,11 @@ class KOMO:
         """nlp(self: _robotic.KOMO) -> NLP
 
         return the problem NLP
+        """
+    def removeObjective(self, arg0: KOMO_Objective) -> None:
+        """removeObjective(self: _robotic.KOMO, arg0: _robotic.KOMO_Objective) -> None
+
+        Remove an objective that was previously added
         """
     def report(self, *args, **kwargs):
         """report(self: _robotic.KOMO, specs: bool = False, listObjectives: bool = True, plotOverTime: bool = False) -> rai::Graph
