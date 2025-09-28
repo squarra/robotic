@@ -138,8 +138,9 @@ class Manipulation:
         self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e0, target=[-target])
         self.komo.addObjective([0.5, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
         # make sure object is not lifted
-        rel_pos = self.scenario.getFrame(self.obj).getRelativePosition()
-        self.komo.addObjective([1.0, 2.0], FS.positionRel, [self.obj, table], OT.eq, scale=[0, 0, 1e1], target=[rel_pos])
+        self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.eq, scale=[0, 0, 1e1], target=[0], order=1)
+        # object stays upright
+        self.komo.addObjective([1.0, 2.0], FS.scalarProductZZ, [table, self.obj], OT.eq, scale=[1e1], target=[1])
         # retract gracefully
         self.komo.addObjective([2.0, 3.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e1], target=[1])
         self.komo.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis, target=[0])

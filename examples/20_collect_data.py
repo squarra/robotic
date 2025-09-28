@@ -1,56 +1,66 @@
 import h5py
 import numpy as np
+from tqdm import trange
 
 from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
 DATASET_PATH = "dataset.h5"
-SLICES = 10  # fewer slices = more speed
-POS_OFFSET = 0.05  # move 5cm along the push/grasp axis
-SEED = 0
+NUM_SCENES = 10
+START_SEED = 1
+SLICES = 10  # fewer slices = faster but less accurate
 
-config = PandaScenario()
-config.add_boxes_to_scene(seed=SEED)
+offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
+num_offsets = len(offset_directions)
+primitives = Manipulation.primitives
+num_primitives = len(primitives)
 
-camera_positions = config.camera_positions
-images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
 with h5py.File(DATASET_PATH, "w") as f:
-    dp_group = f.create_group("datapoint_0001")
-    dp_group.attrs["seed"] = SEED
-    dp_group.create_dataset("camera_positions", data=camera_positions)
-    dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
-    dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
-    dp_group.create_dataset("seg_ids", data=seg_ids, compression="gzip", chunks=True)
+    f.attrs["primitives"] = np.array(primitives, dtype=h5py.string_dtype(encoding="utf-8"))
 
-    objects_group = dp_group.create_group("objects")
-    for obj in config.man_frames:
-        obj_frame = config.getFrame(obj)
-        obj_group = objects_group.create_group(obj)
-        obj_group.create_dataset("pose", data=obj_frame.getRelativePose().astype(np.float32))
-        obj_group.create_dataset("size", data=obj_frame.getSize()[:3].astype(np.float32))
+    for seed in trange(START_SEED, START_SEED + NUM_SCENES, desc="Collecting data"):
+        config = PandaScenario()
+        config.add_boxes(seed=seed)
 
-        primitives_group = obj_group.create_group("primitives")
-        for primitive_name in Manipulation.primitives:
-            _, primitive_dim, primitive_dir = primitive_name.split("_")
-            axis = {"x": 0, "y": 1, "z": 2}[primitive_dim]
-            direction = {"pos": 1, "neg": -1}[primitive_dir]
-            offset_local = np.zeros(3)
-            offset_local[axis] = POS_OFFSET * direction
-            offset_world = obj_frame.getRotationMatrix() @ offset_local
-            target_pos = obj_frame.getRelativePosition() + offset_world
-            target_pose = np.concatenate([target_pos, obj_frame.getRelativeQuaternion()])
+        images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
-            man = Manipulation(config, obj, slices=SLICES)
-            man.target_pose(target_pose)
+        dp_group = f.create_group(f"dp_{seed:04d}")
+        dp_group.create_dataset("cam_poses", data=config.cam_poses)
+        dp_group.create_dataset("images", data=images, compression="gzip", chunks=True)
+        dp_group.create_dataset("depths", data=depths, compression="gzip", chunks=True)
+        dp_group.create_dataset("seg_ids", data=seg_ids, compression="gzip", chunks=True)
 
-            getattr(man, primitive_name)()
-            ret = man.solve()
-            if ret.feasible:
-                man.simulate(view=False)
-            final_pose = obj_frame.getRelativePose()
+        num_objects = len(config.man_frames)
 
-            prim_group = primitives_group.create_group(primitive_name)
-            prim_group.create_dataset("target_pose", data=target_pose.astype(np.float32))
-            prim_group.create_dataset("feasible", data=ret.feasible)
-            prim_group.create_dataset("final_pose", data=final_pose.astype(np.float32))
+        poses = np.zeros((num_objects, 7), dtype=np.float32)
+        sizes = np.zeros((num_objects, 3), dtype=np.float32)
+        target_poses = np.zeros((num_objects, num_offsets, 7), dtype=np.float32)
+        feasibles = np.zeros((num_objects, num_offsets, num_primitives), dtype=np.int8)
+        final_poses = np.zeros((num_objects, num_offsets, num_primitives, 7), dtype=np.float32)
+
+        for oi, obj in enumerate(config.man_frames):
+            frame = config.getFrame(obj)
+            poses[oi] = frame.getRelativePose()
+            sizes[oi] = frame.getSize()[:3]
+
+            for ti, direction in enumerate(offset_directions):
+                target_pos = config.sample_target_pos(obj, direction, seed=seed)
+                target_pose = np.concatenate([target_pos, frame.getRelativeQuaternion()])
+                target_poses[oi][ti] = target_pose
+
+                for pi, primitive in enumerate(primitives):
+                    man = Manipulation(config, obj, slices=SLICES)
+                    man.target_pose(target_pose)
+                    getattr(man, primitive)()
+                    feasible = man.solve().feasible
+                    if feasible:
+                        man.simulate(view=False)
+                    feasibles[oi][ti][pi] = feasible
+                    final_poses[oi][ti][pi] = man.config.getFrame(obj).getRelativePose()
+
+        dp_group.create_dataset("poses", data=poses)
+        dp_group.create_dataset("sizes", data=sizes)
+        dp_group.create_dataset("target_poses", data=target_poses)
+        dp_group.create_dataset("feasibles", data=feasibles)
+        dp_group.create_dataset("final_poses", data=final_poses)

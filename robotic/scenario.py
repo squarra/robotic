@@ -31,6 +31,9 @@ class Scenario(Config):
     def add_topdown_cam(self, height=1.5):
         self.add_cam_pose([0, 0, height, 0, 0, 1, 0])
 
+    def add_marker(self, pose: np.typing.ArrayLike):
+        return self.addFrame("marker", "table").setShape(ST.marker, [0.1]).setRelativePose(pose)
+
     def add_markers(self):
         for i, obj in enumerate(self.man_frames):
             self.addFrame(f"marker{i}", obj).setShape(ST.marker, [0.2])
@@ -96,7 +99,7 @@ class Scenario(Config):
 
     @property
     def man_frames(self):
-        return set(self.getFrameNames()) - self.env_frames
+        return sorted(set(self.getFrameNames()) - self.env_frames)
 
     def __repr__(self):
         return f"{self.__class__.__name__}(env_frames={len(self.env_frames)}, man_frames={len(self.man_frames)}, poses={len(self.cam_poses)})"
@@ -108,7 +111,7 @@ class PandaScenario(Scenario):
 
         self.table = (
             self.addFrame("table", "world")
-            .setShape(ST.ssBox, [1.2, 1.2, 0.1, 0.02])
+            .setShape(ST.ssBox, [2.0, 2.0, 0.1, 0.02])
             .setColor([0.3, 0.3, 0.3])
             .setContact(1)
             .setAttributes({"friction": 0.1, "logical": 0})
@@ -150,3 +153,28 @@ class PandaScenario(Scenario):
 
             if not placed:
                 self.delFrame(box.name)
+
+    def sample_target_pos(self, obj: str, direction: np.typing.ArrayLike, offset_range=(0.25, 0.3), max_tries=20, seed=None):
+        rng = np.random.default_rng(seed)
+
+        frame = self.getFrame(obj)
+        original_pos = frame.getRelativePosition()
+
+        for _ in range(max_tries):
+            offset = np.asarray(direction) * rng.uniform(*offset_range)
+            offset_world = frame.getRotationMatrix() @ offset
+            target_pos = frame.getRelativePosition() + offset_world
+
+            # try move + check
+            frame.setRelativePosition(target_pos)
+            frame.ensure_X()
+            collisions = self.compute_collisions()
+
+            frame.setRelativePosition(original_pos)  # always restore!
+
+            if not collisions:
+                return target_pos
+
+        if DEBUG > 0:
+            print("no collision free offset found")
+        return original_pos
