@@ -126,7 +126,9 @@ class PandaScenario(Scenario):
     def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
 
-    def add_boxes(self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.08), xy_range=((-0.5, 0.5), (-0.5, 0.5)), seed=None, max_tries=100):
+    def add_boxes(
+        self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.12), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
+    ):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)
 
@@ -135,8 +137,16 @@ class PandaScenario(Scenario):
         for i in range(n_objects):
             size = rng.uniform(*box_size_range, size=3)
             quat = matrix_to_quat(random_z_rotation_matrix(rng))
+            mass = density * np.prod(size)
 
-            box = self.addFrame(f"box{i}", "table").setJoint(JT.rigid).setShape(ST.ssBox, [*size, 0.005]).setRelativeQuaternion(quat).setContact(1)
+            box = (
+                self.addFrame(f"box{i}", "table")
+                .setJoint(JT.rigid)
+                .setShape(ST.ssBox, [*size, 0.005])
+                .setRelativeQuaternion(quat)
+                .setContact(1)
+                .setMass(mass)
+            )
 
             placed = False
             for _ in range(max_tries):
@@ -154,7 +164,7 @@ class PandaScenario(Scenario):
             if not placed:
                 self.delFrame(box.name)
 
-    def sample_target_pos(self, obj: str, direction: np.typing.ArrayLike, offset_range=(0.25, 0.3), max_tries=20, seed=None):
+    def sample_target_pos(self, obj: str, direction: np.typing.ArrayLike, offset_range=(0.15, 0.3), max_tries=20, seed=None):
         rng = np.random.default_rng(seed)
 
         frame = self.getFrame(obj)
@@ -165,7 +175,6 @@ class PandaScenario(Scenario):
             offset_world = frame.getRotationMatrix() @ offset
             target_pos = frame.getRelativePosition() + offset_world
 
-            # try move + check
             frame.setRelativePosition(target_pos)
             frame.ensure_X()
             collisions = self.compute_collisions()
