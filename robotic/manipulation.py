@@ -48,7 +48,7 @@ class Manipulation:
         y_axis = np.eye(3)[dim]
         x_axis = np.eye(3)[1 - dim]  # assuming z up
         # xz_plane = np.delete(np.eye(3), dim, axis=0)
-        relative_gripper_contact_pos = 0.5 * self.get_bbox(self.obj)[dim] + 0.025
+        relative_gripper_contact_pos = 0.5 * self.get_bbox(self.obj)[dim] + 0.03
 
         # remove collision objective for the time of pushing
         self.komo.removeObjective(self.collision_objective)
@@ -57,10 +57,10 @@ class Manipulation:
 
         # gripper position
         pre_target = -dir * (relative_gripper_contact_pos + 0.03)
-        self.komo.addObjective([0.8], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[pre_target])
+        self.komo.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[pre_target])
         target = -dir * relative_gripper_contact_pos
         self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[target])
-        self.komo.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
+        self.komo.addObjective([0.8, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
         self.komo.addObjective([0.8, 2.0], FS.positionRel, [gripper, table], OT.eq, scale=[0.0, 0.0, 1e1], target=[0.07])
         # gripper orientation
         self.komo.addObjective([0.8, 2.0], FS.vectorZ, [gripper], OT.eq, [1e-1], [0, 0, 1])
@@ -97,17 +97,18 @@ class Manipulation:
         self.komo.addRigidSwitch(1.0, ["obj_free", self.obj])
 
         x_axis = np.eye(3)[dim]
+        y_axis = np.eye(3)[1 - dim]  # assuming z up
         yz_plane = np.delete(np.eye(3), dim, axis=0)
 
         # gripper position
-        target = 0.5 * self.get_bbox(self.obj) - 0.02
-        self.komo.addObjective([0.6, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
-        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e0, target=[target])
-        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e0, target=[-target])
+        target = 0.5 * self.get_bbox(self.obj) - 0.025
+        self.komo.addObjective([0.5, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e1, target=[target])
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e1, target=[-target])
         # encourage well centered grasps
-        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=[1e-2])
+        self.komo.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[0])
         # gripper orientation
-        self.komo.addObjective([0.6, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
+        self.komo.addObjective([0.4, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
         # retract gracefully
         self.komo.addObjective([2.0, 3.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e1], target=[1])
         self.komo.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis, target=[0])
@@ -134,9 +135,9 @@ class Manipulation:
         # this is stolen from _grasp_obj()
         target = 0.5 * self.get_bbox(self.obj) - 0.02
         self.komo.addObjective([0.5, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
-        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e0, target=[target])
-        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e0, target=[-target])
-        self.komo.addObjective([0.5, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
+        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e1, target=[target])
+        self.komo.addObjective([0.9, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e1, target=[-target])
+        self.komo.addObjective([0.4, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
         # make sure object is not lifted
         self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.eq, scale=[0, 0, 1e1], target=[0], order=1)
         # object stays upright
