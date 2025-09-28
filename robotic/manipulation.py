@@ -68,11 +68,11 @@ class Manipulation:
         self.komo.addObjective([0.8, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[1]])
         self.komo.addObjective([0.8, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[2]])
         # allow movement in only one direction
-        y_axis = self.config.getFrame(self.obj).getRotationMatrix() @ y_axis
-        self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis * 1e0, target=[0], order=1)
+        y_axis_world = self.config.getFrame(self.obj).getRotationMatrix() @ y_axis  # for some reason this needs to be absolute
+        self.komo.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis_world * 1e0, target=[0], order=1)
         # keep gripper orientation and restrict movement for stability
-        self.komo.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, table], OT.eq, [1e1], target=[], order=1)
-        self.komo.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1, target=[0])
+        self.komo.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, table], OT.eq, [1e0], target=[], order=1)
+        self.komo.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
         # retract 5cm
         post_target = -dir * (relative_gripper_contact_pos + 0.05)
         self.komo.addObjective([2.5, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[post_target])
