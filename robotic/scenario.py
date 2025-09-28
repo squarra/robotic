@@ -127,7 +127,7 @@ class PandaScenario(Scenario):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
 
     def add_boxes(
-        self, num_boxes_range=(2, 12), box_size_range=(0.02, 0.12), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
+        self, num_boxes_range=(2, 12), box_size_range=(0.04, 0.12), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
     ):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)
