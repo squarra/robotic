@@ -46,42 +46,48 @@ class Manipulation(KOMO):
 
     def _push_obj(self, dim: int, dir: int):
         self.action = "push"
-        joints = [JT.transX, JT.transY, JT.transZ]
+        joints = [JT.transX, JT.transY]
+        products = [FS.scalarProductYY, FS.scalarProductYX]
 
-        self.addFrameDof("obj_trans", table, joints[dim], False, self.obj)
-        self.addRigidSwitch(1.0, ["obj_trans", self.obj])
+        y_axis = np.eye(3)[dim]  # obj push axis
+        x_axis = np.eye(3)[1 - dim]  # perpendiculart to obj push axis
+        z_axis = np.array([0.0, 0.0, 1.0])  # up axis
 
-        y_axis = np.eye(3)[dim]
-        x_axis = np.eye(3)[1 - dim]  # assuming z up
-        # xz_plane = np.delete(np.eye(3), dim, axis=0)
-        relative_gripper_contact_pos = 0.5 * self.get_bbox(self.obj)[dim] + 0.03
+        obj_bbox = self.get_bbox(self.obj)
+        relative_gripper_contact_pos = 0.5 * obj_bbox[dim] + 0.025
 
         # remove collision objective for the time of pushing
         self.removeObjective(self.collision_objective)
-        self.addObjective([0.0, 0.8], FS.accumulatedCollisions, [], OT.eq, [1e0])
-        self.addObjective([2.2, 3.0], FS.accumulatedCollisions, [], OT.eq, [1e0])
+        self.addObjective([0.0, 0.7], FS.accumulatedCollisions, [], OT.eq, [1e0])
+        self.addObjective([2.3, 3.0], FS.accumulatedCollisions, [], OT.eq, [1e0])
 
-        # gripper position
-        pre_target = -dir * (relative_gripper_contact_pos + 0.03)
-        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[pre_target])
-        target = -dir * relative_gripper_contact_pos
-        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e1, target=[target])
-        self.addObjective([0.8, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
-        self.addObjective([0.8, 2.0], FS.positionRel, [gripper, table], OT.eq, scale=[0.0, 0.0, 1e1], target=[0.07])
-        # gripper orientation
-        self.addObjective([0.8, 2.0], FS.vectorZ, [gripper], OT.eq, [1e-1], [0, 0, 1])
-        self.addObjective([0.8, 2.0], FS.scalarProductYX, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[0]])
-        self.addObjective([0.8, 2.0], FS.scalarProductYY, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[1]])
-        self.addObjective([0.8, 2.0], FS.scalarProductYZ, [gripper, self.obj], OT.eq, scale=[1e0], target=[y_axis[2]])
+        # approach
+        pre_target_z = (0.5 * obj_bbox[2]) + 0.01
+        pre_target_y = -dir * (relative_gripper_contact_pos + 0.03)
+        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=z_axis * 1e0, target=[pre_target_z])
+        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[pre_target_y])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
+        self.addObjective([0.7, 1.0], FS.vectorZ, [gripper], OT.eq, scale=[1e-1], target=[0.0, 0.0, 1.0])
+        self.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        # contact
+        self.addFrameDof("obj_trans", table, joints[dim], False, self.obj)
+        self.addRigidSwitch(1.0, ["obj_trans", self.obj])
+        self.addObjective([1.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis, target=[0.07])
+        # push
+        target_y = -dir * relative_gripper_contact_pos
+        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[target_y])
+        self.addObjective([1.0, 2.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
+        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
+        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis * 1e0, target=[0], order=1)
         # allow movement in only one direction
         y_axis_world = self.config.getFrame(self.obj).getRotationMatrix() @ y_axis  # for some reason this needs to be absolute
         self.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis_world * 1e0, target=[0], order=1)
-        # keep gripper orientation and restrict movement for stability
-        self.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, table], OT.eq, [1e0], target=[], order=1)
-        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
-        # retract 5cm
-        post_target = -dir * (relative_gripper_contact_pos + 0.05)
-        self.addObjective([2.5, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[post_target])
+        # release
+        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis * 1e0, target=[0], order=1)
+        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
+        self.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
+        post_target_y = -dir * (relative_gripper_contact_pos + 0.05)
+        self.addObjective([2.3, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[post_target_y])
 
     def push_x_pos(self):
         self._push_obj(0, 1)
@@ -242,12 +248,13 @@ class Manipulation(KOMO):
                 time.sleep(tau)
                 self.config.view()
 
-        sim.moveGripper(gripper, 0.08)
-        while not sim.gripperIsDone(gripper):
-            sim.step([], tau, ControlMode.spline)
-            if view:
-                time.sleep(tau)
-                self.config.view()
+        if self.action != "push":
+            sim.moveGripper(gripper, 0.08)
+            while not sim.gripperIsDone(gripper):
+                sim.step([], tau, ControlMode.spline)
+                if view:
+                    time.sleep(tau)
+                    self.config.view()
 
         sim.setSplineRef(path=splits[2], times=[times])
         for _ in range(sim_steps):
