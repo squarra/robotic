@@ -37,7 +37,12 @@ class Manipulation(KOMO):
             self.addObjective([], FS.distance, [frame, palm], OT.ineq, scale=[1e1], target=[-0.01])
             self.addObjective([], FS.distance, [frame, "finger1"], OT.ineq, scale=[1e1], target=[-0.01])
             self.addObjective([], FS.distance, [frame, "finger2"], OT.ineq, scale=[1e1], target=[-0.01])
-            self.addObjective([], FS.distance, [frame, self.obj], OT.ineq, scale=[1e1], target=[-0.05])
+            # avoid collisions during manipulation
+            self.addObjective([1.2, 3.0], FS.distance, [frame, self.obj], OT.ineq, scale=[1e1], target=[-0.01])
+
+    def set_slices(self, slices=10):
+        self.slices = slices
+        self.setTiming(self.phases, self.slices, 1.0, 1)
 
     def _push_obj(self, dim: int, dir: int):
         self.action = "push"
@@ -94,28 +99,30 @@ class Manipulation(KOMO):
         self.action = "grasp"
         products = [FS.scalarProductXX, FS.scalarProductXY, FS.scalarProductXZ]
 
+        x_axis = np.eye(3)[dim]
+        y_axis = np.eye(3)[1 - dim]
+        z_axis = np.array([0.0, 0.0, 1.0])
+
+        # approach
+        target = 0.5 * self.get_bbox(self.obj) - 0.025
+        pre_target_z = target[2] + 0.1
+        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=z_axis * 1e0, target=[pre_target_z])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0)
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=y_axis * 1e0, target=[target])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-y_axis * 1e0, target=[-target])
+        self.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
+        # encourage well centered grasps
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e-2, target=[0])
+        # grasp
         self.addFrameDof("obj_free", gripper, JT.free, True, self.obj)
         self.addRigidSwitch(1.0, ["obj_free", self.obj])
-
-        x_axis = np.eye(3)[dim]
-        y_axis = np.eye(3)[1 - dim]  # assuming z up
-        yz_plane = np.delete(np.eye(3), dim, axis=0)
-
-        # gripper position
-        target = 0.5 * self.get_bbox(self.obj) - 0.025
-        self.addObjective([0.5, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e1)
-        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=yz_plane * 1e1, target=[target])
-        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-yz_plane * 1e1, target=[-target])
-        # encourage well centered grasps
-        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[0])
-        # gripper orientation
-        self.addObjective([0.4, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
-        # retract gracefully
-        self.addObjective([2.0, 3.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e1], target=[1])
-        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis, target=[0])
-
+        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=z_axis * 1e0, target=[target])
+        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-z_axis * 1e0, target=[-target])
+        # release
         self.addFrameDof("obj_free_after", table, JT.free, True, self.obj)
         self.addRigidSwitch(2.0, ["obj_free_after", self.obj])
+        self.addObjective([2.0, 3.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[1])
+        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
 
     def grasp_x_pos(self):
         self._grasp_obj(0, 1)
