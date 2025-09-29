@@ -116,7 +116,10 @@ class PandaScenario(Scenario):
             .setContact(1)
             .setAttributes({"friction": 0.1, "logical": 0})
         )
-        self.addFile(raiPath("panda/panda.g")).setParent(self.table).setRelativePoseByText("t(0 -0.2 0.05) d(90 0 0 1)").setJoint(JT.rigid)
+        panda_base_f = (
+            self.addFile(raiPath("panda/panda.g")).setParent(self.table).setRelativePoseByText("t(0 -0.2 0.05) d(90 0 0 1)").setJoint(JT.rigid)
+        )
+        self.addFrame("panda_safety", panda_base_f.name).setShape(ST.ssCylinder, [0.1, 0.3, 0.05]).setColor([1.0, 1.0, 1.0, 0.1]).setContact(-1)
 
         self.env_frames = set(self.getFrameNames())
 
@@ -127,7 +130,7 @@ class PandaScenario(Scenario):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
 
     def add_boxes(
-        self, num_boxes_range=(2, 12), box_size_range=(0.04, 0.12), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
+        self, num_boxes_range=(2, 10), box_size_range=(0.04, 0.10), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
     ):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)
@@ -157,7 +160,10 @@ class PandaScenario(Scenario):
                 box.setRelativePosition([x, y, z])
                 box.ensure_X()
 
-                if not self.compute_collisions():
+                collisions = self.compute_collisions()
+                if collisions and DEBUG > 0:
+                    print(f"Collisions while adding box to scene: {collisions}")
+                if not collisions:
                     placed = True
                     break
 

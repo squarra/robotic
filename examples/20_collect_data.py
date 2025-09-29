@@ -11,6 +11,7 @@ START_SEED = 1
 SLICES = 10  # fewer slices = faster but less accurate
 
 offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
+# offset_directions = [[1, 0, 0]]
 num_offsets = len(offset_directions)
 primitives = Manipulation.primitives
 num_primitives = len(primitives)
@@ -21,7 +22,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
     for seed in trange(START_SEED, START_SEED + NUM_SCENES, desc="Collecting data"):
         config = PandaScenario()
-        config.add_boxes(seed=seed)
+        config.add_boxes(density=200, seed=seed)
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
@@ -50,12 +51,20 @@ with h5py.File(DATASET_PATH, "w") as f:
                 target_poses[oi][ti] = target_pose
 
                 for pi, primitive in enumerate(primitives):
+                    if "push" not in primitive:
+                        continue
                     man = Manipulation(config, obj, slices=SLICES)
-                    man.target_pose(target_pose)
                     getattr(man, primitive)()
+                    man.target_pose(target_pose)
                     feasible = man.solve().feasible
                     if feasible:
-                        man.simulate(view=False)
+                        man = Manipulation(config, obj, slices=SLICES * 2)
+                        getattr(man, primitive)()
+                        man.target_pose(target_pose)
+                        feasible = man.solve().feasible
+                    man.view(pause=True, txt=f"{obj}, {primitive}={feasible}")
+                    if feasible:
+                        man.simulate(view=True)
                     feasibles[oi][ti][pi] = feasible
                     final_poses[oi][ti][pi] = man.config.getFrame(obj).getRelativePose()
 

@@ -49,12 +49,12 @@ class Manipulation(KOMO):
         joints = [JT.transX, JT.transY]
         products = [FS.scalarProductYY, FS.scalarProductYX]
 
-        y_axis = np.eye(3)[dim]  # obj push axis
-        x_axis = np.eye(3)[1 - dim]  # perpendiculart to obj push axis
+        x_axis = np.eye(3)[dim]  # obj push axis
+        y_axis = np.eye(3)[1 - dim]  # lateral to obj push axis
         z_axis = np.array([0.0, 0.0, 1.0])  # up axis
 
         obj_bbox = self.get_bbox(self.obj)
-        relative_gripper_contact_pos = 0.5 * obj_bbox[dim] + 0.025
+        target_x = (0.5 * obj_bbox[dim]) + 0.025
 
         # remove collision objective for the time of pushing
         self.removeObjective(self.collision_objective)
@@ -62,32 +62,31 @@ class Manipulation(KOMO):
         self.addObjective([2.3, 3.0], FS.accumulatedCollisions, [], OT.eq, [1e0])
 
         # approach
+        pre_target_x = -dir * (target_x + 0.03)
         pre_target_z = (0.5 * obj_bbox[2]) + 0.01
-        pre_target_y = -dir * (relative_gripper_contact_pos + 0.03)
+        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[pre_target_x])
         self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=z_axis * 1e0, target=[pre_target_z])
-        self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[pre_target_y])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
-        self.addObjective([0.7, 1.0], FS.vectorZ, [gripper], OT.eq, scale=[1e-1], target=[0.0, 0.0, 1.0])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[0])
         self.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        self.addObjective([0.7, 1.0], FS.vectorZ, [gripper], OT.eq, scale=[1e-1], target=[0.0, 0.0, 1.0])
         # contact
+        self.addObjective([1.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis, target=[0.07])
         self.addFrameDof("obj_trans", table, joints[dim], False, self.obj)
         self.addRigidSwitch(1.0, ["obj_trans", self.obj])
-        self.addObjective([1.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis, target=[0.07])
         # push
-        target_y = -dir * relative_gripper_contact_pos
-        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[target_y])
-        self.addObjective([1.0, 2.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
-        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
+        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[-dir * target_x])
+        self.addObjective([1.0, 2.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[0], order=1)
         self.addObjective([1.0, 2.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis * 1e0, target=[0], order=1)
+        self.addObjective([1.0, 2.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
         # allow movement in only one direction
-        y_axis_world = self.config.getFrame(self.obj).getRotationMatrix() @ y_axis  # for some reason this needs to be absolute
-        self.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * y_axis_world * 1e0, target=[0], order=1)
+        x_axis_world = self.config.getFrame(self.obj).getRotationMatrix() @ x_axis  # for some reason this needs to be absolute
+        self.addObjective([1.0, 2.0], FS.position, [self.obj], OT.ineq, scale=-dir * x_axis_world * 1e0, target=[0], order=1)
         # release
+        post_target_x = -dir * (target_x + 0.05)
+        self.addObjective([2.3, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[post_target_x])
+        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[0], order=1)
         self.addObjective([2.0, 3.0], FS.positionRel, [gripper, table], OT.eq, scale=z_axis * 1e0, target=[0], order=1)
-        self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
         self.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
-        post_target_y = -dir * (relative_gripper_contact_pos + 0.05)
-        self.addObjective([2.3, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e0, target=[post_target_y])
 
     def push_x_pos(self):
         self._push_obj(0, 1)
