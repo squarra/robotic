@@ -7,11 +7,11 @@ from robotic.scenario import PandaScenario
 
 DATASET_PATH = "dataset.h5"
 NUM_SCENES = 10
-START_SEED = 1
+START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
+INCREMENTAL_SLICES = True
 
 offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
-# offset_directions = [[1, 0, 0]]
 num_offsets = len(offset_directions)
 primitives = Manipulation.primitives
 num_primitives = len(primitives)
@@ -22,7 +22,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
     for seed in trange(START_SEED, START_SEED + NUM_SCENES, desc="Collecting data"):
         config = PandaScenario()
-        config.add_boxes(density=200, seed=seed)
+        config.add_boxes(density=500, seed=seed)
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
 
@@ -51,13 +51,11 @@ with h5py.File(DATASET_PATH, "w") as f:
                 target_poses[oi][ti] = target_pose
 
                 for pi, primitive in enumerate(primitives):
-                    if "push" not in primitive:
-                        continue
                     man = Manipulation(config, obj, slices=SLICES)
                     getattr(man, primitive)()
                     man.target_pose(target_pose)
                     feasible = man.solve().feasible
-                    if feasible:
+                    if feasible and INCREMENTAL_SLICES:
                         man = Manipulation(config, obj, slices=SLICES * 2)
                         getattr(man, primitive)()
                         man.target_pose(target_pose)
