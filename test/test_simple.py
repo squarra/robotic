@@ -18,7 +18,7 @@ class TestManipulations(unittest.TestCase):
 
     def test_grasp(self):
         man = Manipulation(config, "box", slices=10)
-        man.grasp_x_pos()
+        man.lift_x_pos()
         man.target_pos([0.1, 0.3, box_z])
         self.assertTrue(man.solve().feasible)
 

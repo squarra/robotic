@@ -56,6 +56,7 @@ class ContextVar:
 DEBUG = ContextVar("DEBUG", 0)
 LOG_LEVEL = ContextVar("LOG", 0)
 setLogLevel(LOG_LEVEL.value)
+VIEW = ContextVar("VIEW", 0)
 
 
 def get_mesh(config: Config, frame_name: str, colors=True, transform=True) -> trimesh.Trimesh:
