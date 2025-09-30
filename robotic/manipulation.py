@@ -11,6 +11,11 @@ gripper = "gripper"
 table = "table"
 palm = "palm"
 
+# for the objectives defining the relative position in the approach of some primitives, it is important
+# that they are all weighted the same. this is basically the reminder for that.
+# setting this too low, will make lots of lifts and pulls of large objects feasible.
+REL_POS_SCALE = 5e0
+
 
 class Manipulation(KOMO):
     primitives = ["push_x_pos", "push_x_neg", "push_y_pos", "push_y_neg", "lift_x", "lift_y", "pull_x_pos", "pull_y_pos"]
@@ -123,17 +128,17 @@ class Manipulation(KOMO):
         pre_target_z = (0.5 * obj_bbox[2]) + 0.1
         target_y = (0.5 * obj_bbox[1]) - gripper_margin_y
         self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=z_axis * 1e0, target=[pre_target_z])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=y_axis * 1e0, target=[target_y])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-y_axis * 1e0, target=[-target_y])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * REL_POS_SCALE, target=[0])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=y_axis * REL_POS_SCALE, target=[target_y])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-y_axis * REL_POS_SCALE, target=[-target_y])
         self.addObjective([0.7, 1.0], products[dim][0], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
         self.addObjective([0.7, 1.0], products[dim][1], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
         # encourage well centered grasps
         self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * 1e-2, target=[0])
         # contact
         target_z = (0.5 * obj_bbox[2]) - gripper_margin_z
-        self.addObjective([0.9, 1.0], FS.positionRel, [self.obj, gripper], OT.ineq, scale=z_axis * 1e0, target=[target_z])
-        self.addObjective([0.9, 1.0], FS.positionRel, [self.obj, gripper], OT.ineq, scale=-z_axis * 1e0, target=[-target_z])
+        self.addObjective([0.9, 1.0], FS.positionRel, [self.obj, gripper], OT.ineq, scale=z_axis * REL_POS_SCALE, target=[target_z])
+        self.addObjective([0.9, 1.0], FS.positionRel, [self.obj, gripper], OT.ineq, scale=-z_axis * REL_POS_SCALE, target=[-target_z])
         # lift
         self.addObjective([1.0, 2.0], FS.vectorZ, [self.obj], OT.eq, scale=[1e0], target=[0.0, 0.0, 1.0])
         self.addObjective([1.0, 1.2], FS.position, [self.obj], OT.eq, scale=xy_plane * 1e0, target=[0], order=1)
@@ -151,46 +156,44 @@ class Manipulation(KOMO):
     def lift_y(self):
         self._lift_obj(1)
 
-    def _pull_obj(self, dim: int, dir: int):
+    def _pull_obj(self, dim: int):
         self.action = "pull"
-        products = [FS.scalarProductXX, FS.scalarProductXY]
+        self.dim = dim
+        products = [[FS.scalarProductXY, FS.scalarProductXZ], [FS.scalarProductXX, FS.scalarProductXZ]]
+
+        self.addFrameDof("obj_free", gripper, JT.free, True, self.obj)
+        self.addRigidSwitch(1.0, ["obj_free", self.obj])
+        self.addFrameDof("obj_free_after", table, JT.free, True, self.obj)
+        self.addRigidSwitch(2.0, ["obj_free_after", self.obj])
 
         x_axis = np.eye(3)[dim]
-        y_axis = np.eye(3)[1 - dim]
         z_axis = np.eye(3)[2]
 
         obj_bbox = self.get_bbox(self.obj)
         max_margin = 0.025
-        gripper_margin_y = min(max_margin, 0.5 * obj_bbox[1])
         gripper_margin_z = min(max_margin, 0.5 * obj_bbox[2])
 
-        # approach
+        # approach (the y_axis stuff is computed in target_pose for pulls)
         pre_target_z = (0.5 * obj_bbox[2]) + 0.1
-        target_y = (0.5 * obj_bbox[1]) - gripper_margin_y
         self.addObjective([0.7], FS.positionRel, [gripper, self.obj], OT.eq, scale=z_axis * 1e0, target=[pre_target_z])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=y_axis * 1e0, target=[target_y])
-        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-y_axis * 1e0, target=[-target_y])
-        self.addObjective([0.7, 1.0], products[dim], [gripper, self.obj], OT.eq, scale=[1e0], target=[dir])
+        self.addObjective([0.7, 1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * REL_POS_SCALE, target=[0])
+        self.addObjective([0.7, 1.0], products[dim][0], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
+        self.addObjective([0.7, 1.0], products[dim][1], [gripper, self.obj], OT.eq, scale=[1e0], target=[0])
         # contact
         target_z = (0.5 * obj_bbox[2]) - gripper_margin_z
-        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=z_axis * 1e0, target=[target_z])
-        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-z_axis * 1e0, target=[-target_z])
-        self.addFrameDof("obj_free", gripper, JT.free, True, self.obj)
-        self.addRigidSwitch(1.0, ["obj_free", self.obj])
+        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=z_axis * REL_POS_SCALE, target=[target_z])
+        self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.ineq, scale=-z_axis * REL_POS_SCALE, target=[-target_z])
         # pull
         self.addObjective([1.0, 2.0], FS.position, [self.obj], OT.eq, scale=z_axis * 1e0, target=[0], order=1)
         # release
-        self.addFrameDof("obj_free_after", table, JT.free, True, self.obj)
-        self.addRigidSwitch(2.0, ["obj_free_after", self.obj])
         self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
         self.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
 
     def pull_x_pos(self):
-        self._pull_obj(0, 1)
+        self._pull_obj(0)
 
     def pull_y_pos(self):
-        self._pull_obj(1, 1)
+        self._pull_obj(1)
 
     def target_pos(self, pos: np.typing.ArrayLike):
         self.target_pose([*pos, *self.config.getFrame(self.obj).getRelativeQuaternion()])
@@ -199,18 +202,26 @@ class Manipulation(KOMO):
         self.target_pose([*self.config.getFrame(self.obj).getRelativePosition(), *quat])
 
     def target_pose(self, pose: np.typing.ArrayLike):
+        pose = np.asarray(pose)
+        if self.action == "pull":
+            obj_frame = self.config.getFrame(self.obj)
+            world_pos_diff = pose[:3] - obj_frame.getRelativePosition()
+            local_pos_diff = obj_frame.getRotationMatrix().T @ world_pos_diff
+            y_dim = 1 - self.dim
+            y_axis = np.eye(3)[y_dim]
+            direction = np.sign(local_pos_diff[y_dim])
+            obj_bbox = self.get_bbox(self.obj)
+            max_margin = 0.025
+            gripper_margin_y = min(max_margin, 0.5 * obj_bbox[y_dim])
+            target_y = direction * (0.5 * obj_bbox[y_dim] - gripper_margin_y)
+            self.addObjective([1.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=y_axis * REL_POS_SCALE, target=[target_y])
+
         self.addObjective([1.9, 3.0], FS.poseRel, [self.obj, table], OT.eq, scale=[1e1], target=pose)
 
     def solve(self):
         sol = NLP_Solver(self.nlp(), DEBUG.value)
         sol.setOptions(damping=1e-1, stopTolerance=1e-3, lambdaMax=100.0, stopInners=20, stopEvals=200)
         return sol.solve(verbose=DEBUG.value)
-
-    def get_grasp_pose(self) -> np.ndarray:
-        return self.getFrame(gripper, 1).getPose()
-
-    def get_grasp_transform(self) -> np.ndarray:
-        return self.getFrame(gripper, 1).getTransform()
 
     def get_bbox(self, frame_name):
         vertices = self.config.getFrame(frame_name).getMesh()[0]
