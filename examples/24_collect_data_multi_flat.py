@@ -11,6 +11,7 @@ DATASET_PATH = "dataset.h5"
 NUM_SCENES = 1000
 START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
+INCREMENTAL_SLICES = True
 
 offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
 num_offsets = len(offset_directions)
@@ -23,14 +24,19 @@ def solve_primitive(args):
     oi, obj, ti, target_pose, pi = args
 
     man = Manipulation(config, obj, slices=SLICES)
-    man.target_pose(target_pose)
     getattr(man, primitives[pi])()
-    ret = man.solve()
-    if ret.feasible:
+    man.target_pose(target_pose)
+    feasible = man.solve()
+    if feasible and INCREMENTAL_SLICES:
+        man = Manipulation(config, obj, slices=SLICES * 2)
+        getattr(man, primitive)()
+        man.target_pose(target_pose)
+        feasible = man.solve().feasible
+    if feasible:
         man.simulate(view=False)
 
     final_pose = man.config.getFrame(obj).getRelativePose()
-    return oi, ti, pi, ret.feasible, final_pose
+    return oi, ti, pi, feasible, final_pose
 
 
 with h5py.File(DATASET_PATH, "w") as f:
