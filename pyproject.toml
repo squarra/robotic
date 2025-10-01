@@ -12,6 +12,7 @@ dependencies = [
     "scikit-learn>=1.7.1",
     "scipy>=1.16.1",
     "seaborn>=0.13.2",
+    "statsmodels>=0.14.5",
     "tensorboard>=2.20.0",
     "torch>=2.8.0",
     "torch-tb-profiler>=0.4.3",
