@@ -40,3 +40,7 @@ The patches I applied to rai with their respective git tags
 - Imporve the primitives
 - Train a model
 - Evaluate data
+
+## Funny seeds:
+
+- 77
