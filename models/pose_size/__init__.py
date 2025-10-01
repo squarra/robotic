@@ -20,9 +20,11 @@ class PoseSizeDataset(Dataset):
                 num_objects = dp_group["poses"].shape[0]
 
                 for oi in range(num_objects):
-                    x = np.concatenate([dp_group["poses"][oi], dp_group["sizes"][oi]])
-                    y = dp_group["feasibles"][oi]
-                    self.data.append((torch.from_numpy(x), torch.from_numpy(y)))
+                    pose = dp_group["poses"][oi]
+                    size = dp_group["sizes"][oi]
+                    target_pose = dp_group["target_poses"][oi]
+                    y = dp_group["feasibles"][oi].astype(np.float32)
+                    self.data.append((torch.from_numpy(pose), torch.from_numpy(size), torch.from_numpy(target_pose), torch.from_numpy(y)))
 
     def __len__(self):
         return len(self.data)
@@ -35,7 +37,7 @@ class PoseSizeMlp(nn.Module):
     def __init__(self, num_primitives, hidden_dim=128, num_layers=2, dropout=0.0):
         super().__init__()
         layers = []
-        input_dim = 10
+        input_dim = 17
 
         for i in range(num_layers):
             layers.append(nn.Linear(input_dim if i == 0 else hidden_dim, hidden_dim))

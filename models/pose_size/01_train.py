@@ -4,7 +4,7 @@ from torch.utils.data import DataLoader
 
 from models.pose_size import DATASET, TEST_DATASET, TRAIN_DATASET, PoseSizeMlp
 
-NUM_EPOCHS = 100
+NUM_EPOCHS = 1000
 BATCH_SIZE = 64
 EVAL_EVERY = 8
 
@@ -19,11 +19,12 @@ optimizer = torch.optim.Adam(model.parameters(), lr=1e-3)
 criterion = nn.BCEWithLogitsLoss()
 
 
-def evaluate(model, loader, criterion, device):
+def evaluate():
     model.eval()
     total_loss, correct, total = 0.0, 0, 0
     with torch.no_grad():
-        for x, y in loader:
+        for pose, size, target_pose, y in test_loader:
+            x = torch.cat((pose, size, target_pose), dim=1)
             x, y = x.to(device), y.to(device)
             logits = model(x)
             loss = criterion(logits, y)
@@ -33,13 +34,14 @@ def evaluate(model, loader, criterion, device):
             correct += (preds == y.long()).all(dim=1).sum().item()
             total += x.size(0)
 
-    return total_loss / len(loader.dataset), correct / total
+    return total_loss / len(test_loader.dataset), correct / total
 
 
 for epoch in range(NUM_EPOCHS):
     model.train()
     total_loss = 0.0
-    for x, y in train_loader:
+    for pose, size, target_pose, y in train_loader:
+        x = torch.cat((pose, size, target_pose), dim=1)
         x, y = x.to(device), y.to(device)
         optimizer.zero_grad()
         logits = model(x)
@@ -51,7 +53,7 @@ for epoch in range(NUM_EPOCHS):
     train_loss = total_loss / len(train_loader.dataset)
 
     if (epoch + 1) % EVAL_EVERY == 0:
-        val_loss, val_acc = evaluate(model, test_loader, criterion, device)
+        val_loss, val_acc = evaluate()
         print(f"epoch {epoch + 1:03d}, train_loss={train_loss:.4f}, val_loss={val_loss:.4f}, val_acc={val_acc:.4f}")
 
 

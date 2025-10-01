@@ -5,8 +5,8 @@ from torch.utils.data import DataLoader
 
 from models.pose_size import DATASET, MODEL_PATH, TEST_DATASET, TRAIN_DATASET, PoseSizeMlp
 
-NUM_TRIALS = 1
-NUM_EPOCHS = 1
+NUM_TRIALS = 20
+NUM_EPOCHS = 100
 BATCH_SIZE = 16
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
@@ -16,7 +16,7 @@ train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, nu
 test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
 
-def evaluate(model, loader, criterion, device):
+def evaluate(model, criterion):
     model.eval()
     total_loss, n_samples = 0.0, 0
 
@@ -25,7 +25,8 @@ def evaluate(model, loader, criterion, device):
     tp, fp, fn = 0, 0, 0
 
     with torch.no_grad():
-        for x, y in loader:
+        for pose, size, target_pose, y in test_loader:
+            x = torch.cat((pose, size, target_pose), dim=1)
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             logits = model(x)
@@ -68,7 +69,8 @@ def objective(trial):
 
     for _ in range(NUM_EPOCHS):
         model.train()
-        for x, y in train_loader:
+        for pose, size, target_pose, y in train_loader:
+            x = torch.cat((pose, size, target_pose), dim=1)
             x = x.to(device, non_blocking=True)
             y = y.to(device, non_blocking=True)
             optimizer.zero_grad()
@@ -77,7 +79,7 @@ def objective(trial):
             loss.backward()
             optimizer.step()
 
-    acc, precision, recall, f1 = evaluate(model, test_loader, criterion, device)
+    acc, precision, recall, f1 = evaluate(model, criterion)
 
     if acc > best_acc:
         best_acc = acc
