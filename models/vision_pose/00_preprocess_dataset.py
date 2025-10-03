@@ -11,21 +11,18 @@ with h5py.File(SOURCE_H5_PATH, "r") as f_in, h5py.File(DATASET_PATH, "w") as f_o
     f_out.attrs.update(f_in.attrs)
 
     for dp_key in tqdm(f_in.keys(), desc="Processing scenes"):
-        scene_group = f_in[dp_key]
+        dp = f_in[dp_key]
 
-        depths = scene_group["depths"][()]
-        cam_pos = scene_group["camera_positions"][()]
-        seg_ids = scene_group["seg_ids"][()]
+        depths = dp["depths"][()]
+        cam_poses = dp["cam_poses"][()]
+        seg_ids = dp["seg_ids"][()]
 
-        num_objects = scene_group["poses"].shape[0]
-
+        num_objects = dp["poses"].shape[0]
         for oi in range(num_objects):
-            new_group = f_out.create_group(f"{dp_key}_obj_{oi}")
-
-            new_group.create_dataset("depths", data=depths)
-            new_group.create_dataset("camera_positions", data=cam_pos)
-
-            new_group.create_dataset("poses", data=scene_group["poses"][oi])
-            new_group.create_dataset("feasibles", data=scene_group["feasibles"][oi])
-
-            new_group.create_dataset("masks", data=(seg_ids == oi).astype(np.float32))
+            dp_group = f_out.create_group(f"{dp_key}_obj_{oi}")
+            dp_group.create_dataset("pose", data=dp["poses"][oi])
+            dp_group.create_dataset("cam_poses", data=cam_poses)
+            dp_group.create_dataset("depths", data=depths)
+            dp_group.create_dataset("masks", data=(seg_ids == oi).astype(np.float32))
+            dp_group.create_dataset("target_pose", data=dp["target_poses"][oi])
+            dp_group.create_dataset("feasibles", data=dp["feasibles"][oi].astype(np.float32))
