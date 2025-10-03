@@ -124,6 +124,10 @@ class Manipulation(KOMO):
         gripper_margin_y = min(max_margin, 0.5 * obj_bbox[1])
         gripper_margin_z = min(max_margin, 0.5 * obj_bbox[2])
 
+        # avoids false positives on too large objects
+        self.addObjective([], FS.distance, [self.obj, "finger1"], OT.ineq, scale=[1e0], target=[-0.003])
+        self.addObjective([], FS.distance, [self.obj, "finger2"], OT.ineq, scale=[1e0], target=[-0.003])
+
         # approach
         pre_target_z = (0.5 * obj_bbox[2]) + 0.1
         target_y = (0.5 * obj_bbox[1]) - gripper_margin_y
@@ -172,6 +176,10 @@ class Manipulation(KOMO):
         obj_bbox = self.get_bbox(self.obj)
         max_margin = 0.025
         gripper_margin_z = min(max_margin, 0.5 * obj_bbox[2])
+
+        # avoids false positives on too large objects
+        self.addObjective([], FS.distance, [self.obj, "finger1"], OT.ineq, scale=[1e0], target=[-0.003])
+        self.addObjective([], FS.distance, [self.obj, "finger2"], OT.ineq, scale=[1e0], target=[-0.003])
 
         # approach (the y_axis stuff is computed in target_pose for pulls)
         pre_target_z = (0.5 * obj_bbox[2]) + 0.1

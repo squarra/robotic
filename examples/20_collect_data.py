@@ -6,13 +6,11 @@ from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
 DATASET_PATH = "dataset.h5"
-NUM_SCENES = 10
+NUM_SCENES = 1
 START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
 INCREMENTAL_SLICES = True
 
-offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
-num_offsets = len(offset_directions)
 primitives = Manipulation.primitives
 num_primitives = len(primitives)
 
@@ -36,35 +34,34 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         poses = np.zeros((num_objects, 7), dtype=np.float32)
         sizes = np.zeros((num_objects, 3), dtype=np.float32)
-        target_poses = np.zeros((num_objects, num_offsets, 7), dtype=np.float32)
-        feasibles = np.zeros((num_objects, num_offsets, num_primitives), dtype=np.int8)
-        final_poses = np.zeros((num_objects, num_offsets, num_primitives, 7), dtype=np.float32)
+        target_poses = np.zeros((num_objects, 7), dtype=np.float32)
+        feasibles = np.zeros((num_objects, num_primitives), dtype=np.float32)
+        final_poses = np.zeros((num_objects, num_primitives, 7), dtype=np.float32)
 
         for oi, obj in enumerate(config.man_frames):
             frame = config.getFrame(obj)
             poses[oi] = frame.getRelativePose()
             sizes[oi] = frame.getSize()[:3]
 
-            for ti, direction in enumerate(offset_directions):
-                target_pos = config.sample_target_pos(obj, direction, seed=seed)
-                target_pose = np.concatenate([target_pos, frame.getRelativeQuaternion()])
-                target_poses[oi][ti] = target_pose
+            target_pose = config.sample_target_pose(obj, seed=seed)
+            target_poses[oi] = target_pose
+            config.add_marker(target_pose)
 
-                for pi, primitive in enumerate(primitives):
-                    man = Manipulation(config, obj, slices=SLICES)
+            for pi, primitive in enumerate(primitives):
+                man = Manipulation(config, obj, slices=SLICES)
+                getattr(man, primitive)()
+                man.target_pose(target_pose)
+                feasible = man.solve().feasible
+                if feasible and INCREMENTAL_SLICES:
+                    man = Manipulation(config, obj, slices=SLICES * 2)
                     getattr(man, primitive)()
                     man.target_pose(target_pose)
                     feasible = man.solve().feasible
-                    if feasible and INCREMENTAL_SLICES:
-                        man = Manipulation(config, obj, slices=SLICES * 2)
-                        getattr(man, primitive)()
-                        man.target_pose(target_pose)
-                        feasible = man.solve().feasible
-                    man.view(pause=True, txt=f"{obj}, {primitive}={feasible}")
-                    if feasible:
-                        man.simulate(view=True)
-                    feasibles[oi][ti][pi] = feasible
-                    final_poses[oi][ti][pi] = man.config.getFrame(obj).getRelativePose()
+                man.view(pause=True, txt=f"{obj}, {primitive}={feasible}")
+                if feasible:
+                    man.simulate(view=True)
+                feasibles[oi][pi] = feasible
+                final_poses[oi][pi] = man.config.getFrame(obj).getRelativePose()
 
         dp_group.create_dataset("poses", data=poses)
         dp_group.create_dataset("sizes", data=sizes)

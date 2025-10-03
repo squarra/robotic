@@ -170,26 +170,32 @@ class PandaScenario(Scenario):
             if not placed:
                 self.delFrame(box.name)
 
-    def sample_target_pos(self, obj: str, direction: np.typing.ArrayLike, offset_range=(0.15, 0.3), max_tries=20, seed=None):
+    def sample_target_pose(
+        self, obj: str, directions=((1, 0, 0), (-1, 0, 0), (0, 1, 0), (0, -1, 0)), offset_range=(0.15, 0.3), max_tries=20, seed=None
+    ):
         rng = np.random.default_rng(seed)
+        directions = rng.permutation(directions)
 
         frame = self.getFrame(obj)
         original_pos = frame.getRelativePosition()
+        original_quat = frame.getRelativeQuaternion()
 
-        for _ in range(max_tries):
-            offset = np.asarray(direction) * rng.uniform(*offset_range)
-            offset_world = frame.getRotationMatrix() @ offset
-            target_pos = frame.getRelativePosition() + offset_world
+        for direction in directions:
+            for _ in range(max_tries):
+                offset = np.asarray(direction) * rng.uniform(*offset_range)
+                offset_world = frame.getRotationMatrix() @ offset
+                target_pos = frame.getRelativePosition() + offset_world
 
-            frame.setRelativePosition(target_pos)
-            frame.ensure_X()
-            collisions = self.compute_collisions()
+                frame.setRelativePosition(target_pos)
+                frame.ensure_X()
+                collisions = self.compute_collisions()
 
-            frame.setRelativePosition(original_pos)  # always restore!
+                # Always restore!
+                frame.setRelativePosition(original_pos)
 
-            if not collisions:
-                return target_pos
+                if not collisions:
+                    return np.concatenate([target_pos, original_quat])
 
         if DEBUG > 0:
-            print("no collision free offset found")
-        return original_pos
+            print("no collision free target pose found")
+        return np.concatenate([original_pos, original_quat])

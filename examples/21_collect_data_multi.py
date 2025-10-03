@@ -8,20 +8,18 @@ from robotic.manipulation import Manipulation
 from robotic.scenario import PandaScenario
 
 DATASET_PATH = "dataset.h5"
-NUM_SCENES = 100
+NUM_SCENES = 1
 START_SEED = 0
 SLICES = 10  # fewer slices = faster but less accurate
 INCREMENTAL_SLICES = True
 
-offset_directions = [[1, 0, 0], [-1, 0, 0], [0, 1, 0], [0, -1, 0]]
-num_offsets = len(offset_directions)
 primitives = Manipulation.primitives
 num_primitives = len(primitives)
 config = PandaScenario()
 
 
 def solve_primitive(args):
-    oi, obj, ti, target_pose, pi = args
+    oi, obj, target_pose, pi = args
 
     man = Manipulation(config, obj, slices=SLICES)
     getattr(man, primitives[pi])()
@@ -29,14 +27,14 @@ def solve_primitive(args):
     feasible = man.solve()
     if feasible and INCREMENTAL_SLICES:
         man = Manipulation(config, obj, slices=SLICES * 2)
-        getattr(man, primitive)()
+        getattr(man, primitives[pi])()
         man.target_pose(target_pose)
         feasible = man.solve().feasible
     if feasible:
         man.simulate(view=False)
 
     final_pose = man.config.getFrame(obj).getRelativePose()
-    return oi, ti, pi, feasible, final_pose
+    return oi, pi, feasible, final_pose
 
 
 with h5py.File(DATASET_PATH, "w") as f:
@@ -50,28 +48,27 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         poses = np.zeros((num_objects, 7), dtype=np.float32)
         sizes = np.zeros((num_objects, 3), dtype=np.float32)
-        target_poses = np.zeros((num_objects, num_offsets, 7), dtype=np.float32)
-        feasibles = np.zeros((num_objects, num_offsets, num_primitives), dtype=np.int8)
-        final_poses = np.zeros((num_objects, num_offsets, num_primitives, 7), dtype=np.float32)
+        target_poses = np.zeros((num_objects, 7), dtype=np.float32)
+        feasibles = np.zeros((num_objects, num_primitives), dtype=np.float32)
+        final_poses = np.zeros((num_objects, num_primitives, 7), dtype=np.float32)
 
         jobs = []
+        rng = np.random.default_rng(seed)
         for oi, obj in enumerate(config.man_frames):
             frame = config.getFrame(obj)
             poses[oi] = frame.getRelativePose()
             sizes[oi] = frame.getSize()[:3]
 
-            for ti, direction in enumerate(offset_directions):
-                target_pos = config.sample_target_pos(obj, direction, seed=seed)
-                target_pose = np.concatenate([target_pos, frame.getRelativeQuaternion()])
-                target_poses[oi][ti] = target_pose
+            target_pose = config.sample_target_pose(obj, seed=seed)
+            target_poses[oi] = target_pose
 
-                for pi, primitive in enumerate(primitives):
-                    jobs.append((oi, obj, ti, target_pose, pi))
+            for pi, primitive in enumerate(primitives):
+                jobs.append((oi, obj, target_pose, pi))
 
         with Pool() as pool:
-            for oi, ti, pi, feasible, final_pose in pool.map(solve_primitive, jobs):
-                feasibles[oi, ti, pi] = feasible
-                final_poses[oi, ti, pi] = final_pose
+            for oi, pi, feasible, final_pose in pool.map(solve_primitive, jobs):
+                feasibles[oi, pi] = feasible
+                final_poses[oi, pi] = final_pose
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
         dp = f.create_group(f"dp_{seed:04d}")
