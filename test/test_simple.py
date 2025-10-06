@@ -24,7 +24,7 @@ class TestManipulations(unittest.TestCase):
 
     def test_pull(self):
         man = Manipulation(config, "box", slices=10)
-        man.pull_x_pos()
+        man.pull_x()
         man.target_pos([0.1, 0.3, box_z])
         self.assertTrue(man.solve().feasible)
 

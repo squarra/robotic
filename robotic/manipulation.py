@@ -18,7 +18,7 @@ REL_POS_SCALE = 5e0
 
 
 class Manipulation(KOMO):
-    primitives = ["push_x_pos", "push_x_neg", "push_y_pos", "push_y_neg", "lift_x", "lift_y", "pull_x_pos", "pull_y_pos"]
+    primitives = ["push_x_pos", "push_x_neg", "push_y_pos", "push_y_neg", "lift_x", "lift_y", "pull_x", "pull_y"]
 
     def __init__(self, scenario: PandaScenario, obj: str, slices=10):
         self.scenario = scenario
@@ -197,10 +197,10 @@ class Manipulation(KOMO):
         self.addObjective([2.0, 3.0], FS.positionRel, [gripper, self.obj], OT.eq, scale=x_axis * 1e0, target=[0], order=1)
         self.addObjective([2.0, 3.0], FS.quaternionRel, [gripper, self.obj], OT.eq, scale=[1e0], target=[], order=1)
 
-    def pull_x_pos(self):
+    def pull_x(self):
         self._pull_obj(0)
 
-    def pull_y_pos(self):
+    def pull_y(self):
         self._pull_obj(1)
 
     def target_pos(self, pos: np.typing.ArrayLike):
