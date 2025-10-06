@@ -10,9 +10,11 @@ with h5py.File(DATASET_PATH, "r") as f:
     datapoints = [k for k in f.keys() if k.startswith("dp_")]
     print(f"Number of datapoints: {len(datapoints)}")
 
-    sample_name = sorted(datapoints)[0]
-    dp = f[sample_name]
+    first_dp = sorted(datapoints)[0]
+    start_seed = int(first_dp.split("_")[1])
+    print(f"Start seed: {start_seed}")
 
+    dp = f[first_dp]
     for name, dataset in dp.items():
         shape = dataset.shape
         dtype = dataset.dtype
