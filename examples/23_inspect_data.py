@@ -1,21 +1,28 @@
+#!/usr/bin/env python3
+import sys
+
 import h5py
 
-DATASET_PATH = "dataset.h5"
+
+def main():
+    if len(sys.argv) < 2:
+        print(f"Usage: {sys.argv[0]} <dataset_path>")
+        sys.exit(1)
+
+    dataset_path = sys.argv[1]
+
+    with h5py.File(dataset_path, "r") as f:
+        print(f"Number of datapoints: {len(f)}")
+
+        primitives = f.attrs.get("primitives", [])
+        print(f"Primitives: {list(primitives)}")
+
+        first_dp = sorted(f)[0]
+        print(f"Start seed: {int(first_dp.split('_')[1])}")
+
+        for name, dataset in f[first_dp].items():
+            print(f"{name:15s} shape={dataset.shape}, dtype={dataset.dtype}")
 
 
-with h5py.File(DATASET_PATH, "r") as f:
-    primitives = f.attrs.get("primitives", [])
-    print(f"Primitives: {list(primitives)}")
-
-    datapoints = [k for k in f.keys() if k.startswith("dp_")]
-    print(f"Number of datapoints: {len(datapoints)}")
-
-    first_dp = sorted(datapoints)[0]
-    start_seed = int(first_dp.split("_")[1])
-    print(f"Start seed: {start_seed}")
-
-    dp = f[first_dp]
-    for name, dataset in dp.items():
-        shape = dataset.shape
-        dtype = dataset.dtype
-        print(f"{name:15s} shape={shape}, dtype={dtype}")
+if __name__ == "__main__":
+    main()
