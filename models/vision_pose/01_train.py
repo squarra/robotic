@@ -14,7 +14,7 @@ print("Using device:", device)
 train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
 test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
 
-model = VisionPoseNet(num_primitives=len(DATASET.primitives), num_views=3).to(device)
+model = VisionPoseNet(out_features=len(DATASET.primitives)).to(device)
 optimizer = torch.optim.Adam(model.parameters(), lr=0.001)
 criterion = nn.BCEWithLogitsLoss()
 
