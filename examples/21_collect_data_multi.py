@@ -46,6 +46,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         num_objects = len(config.man_frames)
 
+        obj_ids = np.zeros((num_objects), dtype=np.int32)
         poses = np.zeros((num_objects, 7), dtype=np.float32)
         sizes = np.zeros((num_objects, 3), dtype=np.float32)
         target_poses = np.zeros((num_objects, 7), dtype=np.float32)
@@ -56,6 +57,7 @@ with h5py.File(DATASET_PATH, "w") as f:
         rng = np.random.default_rng(seed)
         for oi, obj in enumerate(config.man_frames):
             frame = config.getFrame(obj)
+            obj_ids[oi] = frame.ID
             poses[oi] = frame.getRelativePose()
             sizes[oi] = frame.getSize()[:3]
 
@@ -72,6 +74,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         images, depths, seg_ids = config.compute_images_depths_and_seg_ids()
         dp = f.create_group(f"dp_{seed:04d}")
+        dp.create_dataset("obj_ids", data=obj_ids)
         dp.create_dataset("cam_poses", data=config.cam_poses)
         dp.create_dataset("images", data=images, compression="gzip", chunks=True)
         dp.create_dataset("depths", data=depths, compression="gzip", chunks=True)

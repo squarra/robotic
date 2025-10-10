@@ -32,6 +32,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         num_objects = len(config.man_frames)
 
+        obj_ids = np.zeros((num_objects), dtype=np.int32)
         poses = np.zeros((num_objects, 7), dtype=np.float32)
         sizes = np.zeros((num_objects, 3), dtype=np.float32)
         target_poses = np.zeros((num_objects, 7), dtype=np.float32)
@@ -40,6 +41,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
         for oi, obj in enumerate(config.man_frames):
             frame = config.getFrame(obj)
+            obj_ids[oi] = frame.ID
             poses[oi] = frame.getRelativePose()
             sizes[oi] = frame.getSize()[:3]
 
@@ -63,6 +65,9 @@ with h5py.File(DATASET_PATH, "w") as f:
                 feasibles[oi][pi] = feasible
                 final_poses[oi][pi] = man.config.getFrame(obj).getRelativePose()
 
+            config.remove_markers()
+
+        dp_group.create_dataset("obj_ids", data=obj_ids)
         dp_group.create_dataset("poses", data=poses)
         dp_group.create_dataset("sizes", data=sizes)
         dp_group.create_dataset("target_poses", data=target_poses)
