@@ -9,7 +9,7 @@ class Scenario(Config):
         super().__init__()
         self.world = self.addFrame("world")
 
-        self.cam = self.addFrame("camera", "world").setAttributes({"focalLength": 0.895, "width": 640.0, "height": 360.0, "zRange": [0.01, 5.0]})
+        self.cam = self.addFrame("camera", "world").setAttributes({"focalLength": 1.0, "width": 420.0, "height": 360.0, "zRange": [0.01, 2.0]})
         self.cam_view = CameraView(self)
         self.cam_view.setCamera(self.cam)
         self._cam_poses = []
@@ -124,7 +124,7 @@ class PandaScenario(Scenario):
         self.env_frames = set(self.getFrameNames())
 
         if add_circular_cam_poses:
-            self.add_circular_cam_poses()
+            self.add_circular_cam_poses(radius=0.75)
 
     def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
