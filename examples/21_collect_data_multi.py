@@ -21,12 +21,12 @@ config = PandaScenario()
 def solve_primitive(args):
     oi, obj, target_pose, pi = args
 
-    man = Manipulation(config, obj, slices=SLICES)
+    man = Manipulation(config, obj, slices=SLICES, k_order=1)
     getattr(man, primitives[pi])()
     man.target_pose(target_pose)
     feasible = man.solve()
     if feasible and INCREMENTAL_SLICES:
-        man = Manipulation(config, obj, slices=SLICES * 2)
+        man = Manipulation(config, obj, slices=SLICES * 2, k_order=2)
         getattr(man, primitives[pi])()
         man.target_pose(target_pose)
         feasible = man.solve().feasible
@@ -42,7 +42,7 @@ with h5py.File(DATASET_PATH, "w") as f:
 
     for seed in trange(START_SEED, START_SEED + NUM_SCENES, desc="Collecting data"):
         config.delete_man_frames()
-        config.add_boxes(seed=seed)
+        config.add_boxes(density=500, seed=seed)
 
         num_objects = len(config.man_frames)
 

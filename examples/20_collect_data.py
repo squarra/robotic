@@ -47,15 +47,15 @@ with h5py.File(DATASET_PATH, "w") as f:
 
             target_pose = config.sample_target_pose(obj, seed=seed)
             target_poses[oi] = target_pose
-            config.add_marker(target_pose)
+            config.add_marker("target_pose", target_pose)
 
             for pi, primitive in enumerate(primitives):
-                man = Manipulation(config, obj, slices=SLICES)
+                man = Manipulation(config, obj, slices=SLICES, k_order=1)
                 getattr(man, primitive)()
                 man.target_pose(target_pose)
                 feasible = man.solve().feasible
                 if feasible and INCREMENTAL_SLICES:
-                    man = Manipulation(config, obj, slices=SLICES * 2)
+                    man = Manipulation(config, obj, slices=SLICES * 2, k_order=2)
                     getattr(man, primitive)()
                     man.target_pose(target_pose)
                     feasible = man.solve().feasible

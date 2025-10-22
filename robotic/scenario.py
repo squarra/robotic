@@ -9,7 +9,7 @@ class Scenario(Config):
         super().__init__()
         self.world = self.addFrame("world")
 
-        self.cam = self.addFrame("camera", "world").setAttributes({"focalLength": 1.0, "width": 420.0, "height": 360.0, "zRange": [0.01, 2.0]})
+        self.cam = self.addFrame("camera", "world").setAttributes({"focalLength": 1.0, "width": 420.0, "height": 360.0, "zRange": [0.01, 5.0]})
         self.cam_view = CameraView(self)
         self.cam_view.setCamera(self.cam)
         self._cam_poses = []
@@ -31,8 +31,8 @@ class Scenario(Config):
     def add_topdown_cam(self, height=1.5):
         self.add_cam_pose([0, 0, height, 0, 0, 1, 0])
 
-    def add_marker(self, pose: np.typing.ArrayLike):
-        return self.addFrame("marker", "table").setShape(ST.marker, [0.1]).setRelativePose(pose)
+    def add_marker(self, name: str, pose: np.typing.ArrayLike):
+        return self.addFrame(f"{name}_marker", "table").setShape(ST.marker, [0.1]).setRelativePose(pose)
 
     def add_markers(self):
         for i, obj in enumerate(self.man_frames):
@@ -129,9 +129,7 @@ class PandaScenario(Scenario):
     def add_box(self, name: str, size: np.typing.ArrayLike, pos: np.typing.ArrayLike):
         return self.addFrame(name, "table").setJoint(JT.rigid).setShape(ST.ssBox, size).setRelativePosition([pos]).setContact(1)
 
-    def add_boxes(
-        self, num_boxes_range=(2, 10), box_size_range=(0.04, 0.10), xy_range=((-0.5, 0.5), (-0.5, 0.5)), density=500.0, seed=None, max_tries=100
-    ):
+    def add_boxes(self, num_boxes_range=(2, 8), box_size_range=(0.04, 0.10), radius=0.5, density=500.0, seed=None, max_tries=100):
         rng = np.random.default_rng(seed)
         n_objects = rng.integers(*num_boxes_range)
 
@@ -153,9 +151,11 @@ class PandaScenario(Scenario):
 
             placed = False
             for _ in range(max_tries):
-                x = rng.uniform(*xy_range[0])
-                y = rng.uniform(*xy_range[1])
-                z = table_z / 2 + size[2] / 2 + np.finfo(np.float32).eps
+                angle = rng.uniform(0, np.pi)
+                r = np.sqrt(rng.uniform(0, 1)) * radius
+                x = r * np.cos(angle)
+                y = r * np.sin(angle)
+                z = (0.5 * table_z) + (0.5 * size[2]) + np.finfo(np.float32).eps
 
                 box.setRelativePosition([x, y, z])
                 box.ensure_X()
