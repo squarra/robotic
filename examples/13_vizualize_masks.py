@@ -13,7 +13,7 @@ config.addFrame("box2", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size)
 config.addFrame("box3", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size).setRelativePosition([0.4, 0.1, box_z]).setContact(1)
 config.addFrame("box4", "table").setJoint(JT.rigid).setShape(ST.ssBox, box_size).setRelativePosition([0.1, 0.4, box_z]).setContact(1)
 
-images, seg_ids = config.compute_images_and_seg_ids(grayscale=True)
+images, _, seg_ids = config.compute_images_depths_and_seg_ids()
 n_images = len(images)
 
 for obj in config.man_frames:
