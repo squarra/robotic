@@ -1,16 +1,25 @@
+#!/usr/bin/env python3
+import argparse
+
 import h5py
 
-input_paths = ["dataset-0000-1000.h5", "dataset-1000-1500.h5"]
-output_path = "dataset-merged.h5"
 
-with h5py.File(output_path, "w") as fout:
-    # Copy attributes
-    with h5py.File(input_paths[0], "r") as f0:
-        for k, v in f0.attrs.items():
-            fout.attrs[k] = v
+def main():
+    parser = argparse.ArgumentParser(description=("Concatenate multiple HDF5 files into a single output file."))
+    parser.add_argument("inputs", nargs="+", help="Input HDF5 files in the desired concatenation order.")
+    args = parser.parse_args()
 
-    # Go through each dataset file
-    for path in input_paths:
-        with h5py.File(path, "r") as fin:
-            for key in fin.keys():
-                fin.copy(key, fout)
+    with h5py.File("dataset-merged.h5", "w") as fout:
+        first = args.inputs[0]
+        with h5py.File(first, "r") as f0:
+            for k, v in f0.attrs.items():
+                fout.attrs[k] = v
+
+        for path in args.inputs:
+            with h5py.File(path, "r") as fin:
+                for key in fin.keys():
+                    fin.copy(source=key, dest=fout)
+
+
+if __name__ == "__main__":
+    main()
