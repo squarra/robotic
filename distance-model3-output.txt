@@ -1,0 +1,10 @@
+Using device: cuda:5
+Total scenes: 10996
+Train: 8796 scenes, 39784 samples
+Val: 1099 scenes, 4915 samples
+Test: 1101 scenes, 4995 samples
+Sample shapes: [(256, 384), (256, 384), (256, 384), (4,), (8,)]
+Alpha: tensor([0.8307, 0.8268, 0.8255, 0.8309, 0.5378, 0.5309, 0.5987, 0.5940],
+       device='cuda:5')
+Model parameters: 3,904,328
+impacts: d=0.016 m=0.001 dist=0.030 q=0.005 | std: patch=0.103 cls=1.000 trans=1.000 quat=0.214 logit=0.098 | dead: p=0.00 c=0.00 q=0.00 | div: p=0.018 c=0.025

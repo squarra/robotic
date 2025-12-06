@@ -3,8 +3,8 @@ import torch
 import torch.nn as nn
 from torch.utils.data import DataLoader, Dataset
 
-DATASET_PATH = "vision_pose_regression_dataset.h5"
-MODEL_PATH = "vision_pose_regression_net.pt"
+DATASET_PATH = "easy_dataset.h5"
+MODEL_PATH = "easy_net.pt"
 
 
 class VisionPoseRegressionDataset(Dataset):
@@ -35,7 +35,6 @@ class VisionPoseRegressionDataset(Dataset):
         self._init_h5()
         dp = self._h5_file[self.keys[idx]]
         return (
-            dp["cam_poses"][()],
             dp["depths"][()],
             dp["masks"][()],
             dp["pose"][()],
@@ -104,20 +103,20 @@ class VisionPoseRegressionNet(nn.Module):
 
 
 generator = torch.Generator().manual_seed(42)
-# DATASET = VisionPoseRegressionDataset(DATASET_PATH)
-# TRAIN_DATASET, TEST_DATASET = torch.utils.data.random_split(DATASET, [0.8, 0.2], generator=generator)
-# PRIMITIVES = DATASET.primitives
+DATASET = VisionPoseRegressionDataset(DATASET_PATH)
+TRAIN_DATASET, TEST_DATASET = torch.utils.data.random_split(DATASET, [0.8, 0.2], generator=generator)
+PRIMITIVES = DATASET.primitives
 
 
-# def calculate_pos_weights(dataset: Dataset) -> torch.Tensor:
-#     loader = DataLoader(dataset, batch_size=128, shuffle=False, num_workers=4)
+def calculate_pos_weights(dataset: Dataset) -> torch.Tensor:
+    loader = DataLoader(dataset, batch_size=128, shuffle=False, num_workers=4)
 
-#     positive_counts = torch.zeros(len(PRIMITIVES))
-#     for batch in loader:
-#         feasibles = batch[5]
-#         positive_counts += feasibles.sum(dim=0)
+    positive_counts = torch.zeros(len(PRIMITIVES))
+    for batch in loader:
+        feasibles = batch[5]
+        positive_counts += feasibles.sum(dim=0)
 
-#     return (len(dataset) - positive_counts) / (positive_counts + 1e-8)
+    return (len(dataset) - positive_counts) / (positive_counts + 1e-8)
 
 
-# TRAIN_WEIGHTS = calculate_pos_weights(TRAIN_DATASET)
+TRAIN_WEIGHTS = calculate_pos_weights(TRAIN_DATASET)

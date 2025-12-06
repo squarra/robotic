@@ -5,7 +5,7 @@ from torch.utils.data import DataLoader
 
 from models.vision_pose_regression import DATASET, MODEL_PATH, TEST_DATASET, TRAIN_DATASET, VisionPoseRegressionNet
 
-NUM_TRIALS = 10
+NUM_TRIALS = 20
 NUM_EPOCHS = 20
 BATCH_SIZE = 16
 EVAL_EVERY = 5
@@ -14,15 +14,15 @@ POSE_LOSS_WEIGHT = 10.0
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 print("Using device:", device)
 
-train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4, pin_memory=True)
-test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4, pin_memory=True)
+train_loader = DataLoader(TRAIN_DATASET, batch_size=BATCH_SIZE, shuffle=True, num_workers=4)
+test_loader = DataLoader(TEST_DATASET, batch_size=BATCH_SIZE, shuffle=False, num_workers=4)
 
 mse_loss = nn.MSELoss(reduction="none")
 bce_loss = nn.BCEWithLogitsLoss()
 
 
 def move_to_device(batch: tuple[torch.Tensor, ...]):
-    return tuple(item.to(device, non_blocking=True) for item in batch)
+    return tuple(item.to(device) for item in batch)
 
 
 def compute_masked_pose_loss(pred_pose: torch.Tensor, target_pose: torch.Tensor, feas_mask: torch.Tensor):
@@ -35,6 +35,7 @@ def compute_masked_pose_loss(pred_pose: torch.Tensor, target_pose: torch.Tensor,
 
 def collect_test_outputs(model):
     all_feas_logits, all_pose_preds, all_feats, all_pose_diffs = [], [], [], []
+    model.eval()
     with torch.no_grad():
         for batch in test_loader:
             cam_poses, depths, masks, pose, target_pose, feasibles, pose_diffs = move_to_device(batch)
@@ -52,9 +53,9 @@ best_loss = float("inf")
 def objective(trial):
     global best_loss
 
-    cnn_channels = trial.suggest_categorical("cnn_channels", [8, 16, 32])
-    hidden_dim = trial.suggest_categorical("hidden_dim", [32, 64, 128])
-    head_layers = trial.suggest_int("head_layers", 1, 3)
+    cnn_channels = trial.suggest_categorical("cnn_channels", [16, 32, 64])
+    hidden_dim = trial.suggest_categorical("hidden_dim", [64, 128, 256])
+    head_layers = trial.suggest_int("head_layers", 3, 5)
     dropout = trial.suggest_float("dropout", 0.0, 0.4)
     lr = trial.suggest_float("lr", 1e-4, 5e-3, log=True)
 
@@ -83,23 +84,19 @@ def objective(trial):
             optimizer.step()
 
         if (epoch + 1) % EVAL_EVERY == 0:
-            model.eval()
-            with torch.no_grad():
-                feas_logits, pose_preds, feasibles, pose_diffs = collect_test_outputs(model)
-                feas_loss = bce_loss(feas_logits, feasibles).item()
-                pose_loss = compute_masked_pose_loss(pose_preds, pose_diffs, feasibles).item()
-                loss = feas_loss + POSE_LOSS_WEIGHT * pose_loss
+            feas_logits, pose_preds, feasibles, pose_diffs = collect_test_outputs(model)
+            feas_loss = bce_loss(feas_logits, feasibles)
+            pose_loss = compute_masked_pose_loss(pose_preds, pose_diffs, feasibles)
+            loss = feas_loss + POSE_LOSS_WEIGHT * pose_loss
 
             trial.report(loss, epoch)
             if trial.should_prune():
                 raise optuna.TrialPruned()
 
-    model.eval()
-    with torch.no_grad():
-        feas_logits, pose_preds, feasibles, pose_diffs = collect_test_outputs(model)
-        feas_loss = bce_loss(feas_logits, feasibles).item()
-        pose_loss = compute_masked_pose_loss(pose_preds, pose_diffs, feasibles).item()
-        loss = feas_loss + POSE_LOSS_WEIGHT * pose_loss
+    feas_logits, pose_preds, feasibles, pose_diffs = collect_test_outputs(model)
+    feas_loss = bce_loss(feas_logits, feasibles)
+    pose_loss = compute_masked_pose_loss(pose_preds, pose_diffs, feasibles)
+    loss = feas_loss + POSE_LOSS_WEIGHT * pose_loss
 
     if loss < best_loss:
         best_loss = loss
@@ -107,9 +104,9 @@ def objective(trial):
             {
                 "model_state_dict": model.state_dict(),
                 "params": trial.params,
-                "val_loss_feas": feas_loss,
-                "val_loss_pose": pose_loss,
-                "combined_val_loss": loss,
+                "feas_loss": feas_loss,
+                "pose_loss": pose_loss,
+                "loss": loss,
             },
             MODEL_PATH,
         )
@@ -121,9 +118,9 @@ study = optuna.create_study(study_name="vision_pose_regression", direction="mini
 study.optimize(objective, n_trials=NUM_TRIALS)
 
 checkpoint = torch.load(MODEL_PATH, map_location=device)
-print("\nBest parameters:")
+print("best parameters:")
 for k, v in checkpoint["params"].items():
     print(f"  {k}: {v}")
-print(f"  val_loss_feas:   {checkpoint['val_loss_feas']:.6f}")
-print(f"  val_loss_pose:   {checkpoint['val_loss_pose']:.6f}")
-print(f"  combined_val_loss: {checkpoint['combined_val_loss']:.6f}")
+print(f"feas_loss: {checkpoint['feas_loss']:.6f}")
+print(f"pose_loss: {checkpoint['pose_loss']:.6f}")
+print(f"loss:      {checkpoint['loss']:.6f}")
